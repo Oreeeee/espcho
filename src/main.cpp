@@ -3,6 +3,8 @@
 #include <WiFiServer.h>
 #include <WiFiClient.h>
 #include "config.h"
+#include "constants.h"
+#include "BanchoServer.h"
 
 WiFiServer server(CHO_PORT);
 
@@ -31,14 +33,9 @@ void loop() {
   if (client) {
     Serial.printf("Accepted connection from %s:%d\n", client.remoteIP().toString(), client.remotePort());
 
-    while (client.connected()) {
-      if (client.available()) {
-        char *req = (char*)calloc(64, sizeof(char));
-        client.readBytes(req, 64);
-
-        Serial.printf("Received from client: %s\n", req);
-        free(req);
-      }
+    if (client.available()) {
+      LoginPacket lp = getConnectionInfo(client);
+      Serial.printf("Username: %s\nPassword: %s\nClient info: %s\n", lp.username, lp.password, lp.clientInfo);
     }
 
     client.stop();

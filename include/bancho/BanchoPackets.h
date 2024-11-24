@@ -1,6 +1,11 @@
 #ifndef BANCHOPACKETS_H
 #define BANCHOPACKETS_H
 
+
+// PLEASE READ THE b338 ENUM ORDER PLZZZZZZZZZZZ
+// Don't let the UserStats incident happen again
+#define CHO_PACKET_REQUEST_STATUS 3
 #define CHO_PACKET_LOGINREPLY 5
+#define CHO_PACKET_USER_STATS 12
 
 #endif

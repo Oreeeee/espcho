@@ -7,6 +7,7 @@
 
 BanchoHeader readBanchoPacket(WiFiClient client, char *buf);
 LoginPacket getConnectionInfo(WiFiClient client);
+void sendUserStats(WiFiClient client);
 bool authenticateChoUser(WiFiClient client, char *login, char *password);
 
 #endif

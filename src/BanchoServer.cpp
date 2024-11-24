@@ -6,6 +6,7 @@
 #include "bancho/LoginReply.h"
 #include "bancho/BanchoHeader.h"
 #include "bancho/BanchoPackets.h"
+#include "bancho/UserStats.h"
 
 LoginPacket getConnectionInfo(WiFiClient client) {
     LoginPacket lp;
@@ -33,6 +34,27 @@ BanchoHeader readBanchoPacket(WiFiClient client, char *buf) {
         Serial.printf("Received data: %s\n", buf);
     }
     return h;
+}
+
+void sendUserStats(WiFiClient client) {
+    UserStats p;
+    p.userId = CHO_APPROVED_USERID;
+    p.completness = 0;
+    p.status = 0;
+    p.beatmapUpdate = false;
+    //p.statusText = (char*)calloc(1, sizeof(char)); // TODO
+    //p.beatmapMD5 = (char*)calloc(1, sizeof(char)); // TODO
+    p.mods = 0;
+
+    BanchoHeader h;
+    h.packetId = CHO_PACKET_USER_STATS;
+    h.compression = false;
+    //h.size = UserStats_Size(p);
+    h.size = 11; // TODO : Calculate this automatically, dynamic calculations cause crashes
+
+    BanchoHeader_Write(h, client);
+    UserStats_Write(p, client);
+    client.flush();
 }
 
 bool authenticateChoUser(WiFiClient client, char *login, char *password) {

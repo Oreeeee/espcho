@@ -5,6 +5,7 @@
 #include "config.h"
 #include "constants.h"
 #include "BanchoServer.h"
+#include "bancho/BanchoPackets.h"
 
 WiFiServer server(CHO_PORT);
 
@@ -50,6 +51,10 @@ void loop() {
         h = readBanchoPacket(client, buf);
 
         switch (h.packetId) {
+          case CHO_PACKET_REQUEST_STATUS:
+            Serial.println("Received RequestStatus");
+            sendUserStats(client);
+            break;
           default:
             Serial.printf("Unknown packet received: %d\n", h.packetId);
         }

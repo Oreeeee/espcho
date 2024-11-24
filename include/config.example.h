@@ -11,5 +11,6 @@
 
 #define CHO_WIFI_SSID "Cho-WiFi" /* Your WiFi name */
 #define CHO_WIFI_PASS "recorderinthesandybridge" /* Your WiFi password */
+#define CHO_PORT 13381 /* Port on which the TCP server will listen on */
 
 #endif

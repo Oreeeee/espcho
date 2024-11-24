@@ -36,6 +36,13 @@ void loop() {
     if (client.available()) {
       LoginPacket lp = getConnectionInfo(client);
       Serial.printf("Username: %s\nPassword: %s\nClient info: %s\n", lp.username, lp.password, lp.clientInfo);
+
+      Serial.println("Verifying login");
+      if (!authenticateChoUser(client, lp.username, lp.password)) {
+        Serial.println("Authentication failed! Server dropping conenction");
+        client.stop();
+      }
+      Serial.println("Authentication successful!");
     }
 
     client.stop();

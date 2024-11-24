@@ -1,0 +1,6 @@
+#ifndef BANCHOPACKETS_H
+#define BANCHOPACKETS_H
+
+#define CHO_PACKET_LOGINREPLY 5
+
+#endif

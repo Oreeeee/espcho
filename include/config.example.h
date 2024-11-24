@@ -13,4 +13,10 @@
 #define CHO_WIFI_PASS "recorderinthesandybridge" /* Your WiFi password */
 #define CHO_PORT 13381 /* Port on which the TCP server will listen on */
 
+/* Approved hardcoded credentials */
+/* TODO: Store credentials in SQLite */
+#define CHO_APPROVED_USER "peppy"
+#define CHO_APPROVED_PASSWORD "cad6c40404b487337334537b29608ffc" // recorderinthesandybridge
+#define CHO_APPROVED_USERID 2
+
 #endif

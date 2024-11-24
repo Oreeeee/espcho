@@ -33,16 +33,30 @@ void loop() {
   if (client) {
     Serial.printf("Accepted connection from %s:%d\n", client.remoteIP().toString(), client.remotePort());
 
-    if (client.available()) {
-      LoginPacket lp = getConnectionInfo(client);
-      Serial.printf("Username: %s\nPassword: %s\nClient info: %s\n", lp.username, lp.password, lp.clientInfo);
+    LoginPacket lp = getConnectionInfo(client);
+    Serial.printf("Username: %s\nPassword: %s\nClient info: %s\n", lp.username, lp.password, lp.clientInfo);
 
-      Serial.println("Verifying login");
-      if (!authenticateChoUser(client, lp.username, lp.password)) {
-        Serial.println("Authentication failed! Server dropping conenction");
-        client.stop();
+    Serial.println("Verifying login");
+    if (!authenticateChoUser(client, lp.username, lp.password)) {
+      Serial.println("Authentication failed! Server dropping conenction");
+      client.stop();
+    }
+    Serial.println("Authentication successful!");
+
+    while (client.connected()) {
+      if (client.available()) {
+        char *buf;
+        BanchoHeader h;
+        h = readBanchoPacket(client, buf);
+
+        switch (h.packetId) {
+          default:
+            Serial.printf("Unknown packet received: %d\n", h.packetId);
+        }
+
+        //if (buf != NULL)
+        free(buf);
       }
-      Serial.println("Authentication successful!");
     }
 
     client.stop();

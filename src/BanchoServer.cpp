@@ -24,6 +24,17 @@ LoginPacket getConnectionInfo(WiFiClient client) {
     return lp;
 }
 
+BanchoHeader readBanchoPacket(WiFiClient client, char *buf) {
+    BanchoHeader h = BanchoHeader_Read(client);
+    Serial.printf("Received header: %d, %x, %d\n", h.packetId, h.compression, h.size);
+    buf = (char*)malloc(h.size); // Doing this makes it not require checking if buf != NULL before free(buf)
+    if (h.size) {
+        client.readBytes(buf, h.size);
+        Serial.printf("Received data: %s\n", buf);
+    }
+    return h;
+}
+
 bool authenticateChoUser(WiFiClient client, char *login, char *password) {
     BanchoHeader h;
     h.packetId = CHO_PACKET_LOGINREPLY;

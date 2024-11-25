@@ -7,9 +7,18 @@
 #include "BanchoServer.h"
 #include "bancho/BanchoPackets.h"
 
+#ifdef CHO_DISABLE_BROWNOUT
+#include "soc/soc.h"
+#include "soc/rtc_cntl_reg.h"
+#endif
+
 WiFiServer server(CHO_PORT);
 
 void setup() {
+  #ifdef CHO_DISABLE_BROWNOUT
+  WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
+  #endif
+
   Serial.begin(9600);
   Serial.println("espcho says hello!");
 
@@ -43,6 +52,11 @@ void loop() {
       client.stop();
     }
     Serial.println("Authentication successful!");
+
+    // Make client join #osu
+    Serial.println("Sending join #osu to client");
+    sendChannelAutojoin(client, "#osu");
+    Serial.println("Sent #osu request");
 
     while (client.connected()) {
       if (client.available()) {

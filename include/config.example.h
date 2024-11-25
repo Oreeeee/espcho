@@ -19,4 +19,7 @@
 #define CHO_APPROVED_PASSWORD "cad6c40404b487337334537b29608ffc" // recorderinthesandybridge
 #define CHO_APPROVED_USERID 2
 
+/* Uncomment to disable brownout detector */
+//#define CHO_DISABLE_BROWOUT
+
 #endif

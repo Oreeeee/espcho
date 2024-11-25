@@ -54,9 +54,11 @@ void loop() {
     Serial.println("Authentication successful!");
 
     // Make client join #osu
+    /*
     Serial.println("Sending join #osu to client");
     sendChannelAutojoin(client, "#osu");
     Serial.println("Sent #osu request");
+    */
 
     while (client.connected()) {
       if (client.available()) {

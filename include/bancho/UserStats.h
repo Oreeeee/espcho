@@ -16,5 +16,7 @@ typedef struct {
 
 uint32_t UserStats_Size(UserStats p);
 void UserStats_Write(UserStats p, WiFiClient client);
+void UserStats_Serialize(UserStats p, char *buf);
+void UserStats_Send(UserStats p, WiFiClient client);
 
 #endif

@@ -47,15 +47,8 @@ void sendUserStats(WiFiClient client) {
     //p.beatmapMD5 = (char*)calloc(1, sizeof(char)); // TODO
     p.mods = 0;
 
-    BanchoHeader h;
-    h.packetId = CHO_PACKET_USER_STATS;
-    h.compression = false;
-    //h.size = UserStats_Size(p);
-    h.size = 11; // TODO : Calculate this automatically, dynamic calculations cause crashes
-
-    BanchoHeader_Write(h, client);
-    UserStats_Write(p, client);
-    client.flush();
+    Serial.println("UserStats_Send()");
+    UserStats_Send(p, client);
 }
 
 void sendChannelAutojoin(WiFiClient client, char channelName[]) {

@@ -59,22 +59,20 @@ void sendUserStats(WiFiClient client) {
 }
 
 void sendChannelAutojoin(WiFiClient client, char channelName[]) {
-    // ChannelAvailableAutojoin p;
-    // p.channelName = (char*)malloc(strlen(channelName) + 1);
-    // strncpy(p.channelName, channelName, strlen(channelName) + 1);
+    ChannelAvailableAutojoin p;
+    p.channelName = (char*)malloc(strlen(channelName) + 1);
+    strncpy(p.channelName, channelName, strlen(channelName) + 1);
 
-    // BanchoHeader h;
-    // h.packetId = CHO_PACKET_CHANNEL_AVAILABLE_AUTOJOIN;
-    // h.compression = false;
-    // //h.size = ChannelAvailableAutojoin_Size(p);
-    // h.size = 4;
+    BanchoHeader h;
+    h.packetId = CHO_PACKET_CHANNEL_AVAILABLE_AUTOJOIN;
+    h.compression = false;
+    h.size = ChannelAvailableAutojoin_Size(p);
 
-    // BanchoHeader_Write(h, client);
-    // ChannelAvailableAutojoin_Write(p, client);
-    // client.flush();
-    char *dupa = "\x44\x00\x00\x06\x00\x00\x00\x0b\x04\x23\x6f\x73\x75";
-    client.write(dupa);
+    BanchoHeader_Write(h, client);
+    ChannelAvailableAutojoin_Write(p, client);
     client.flush();
+
+    free(p.channelName);
 }
 
 bool authenticateChoUser(WiFiClient client, char *login, char *password) {

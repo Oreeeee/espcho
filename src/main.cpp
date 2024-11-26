@@ -7,6 +7,7 @@
 #include "BanchoServer.h"
 #include "bancho/BanchoPackets.h"
 #include "BanchoState.h"
+#include "Pinger.h"
 
 #ifdef CHO_DISABLE_BROWNOUT
 #include "soc/soc.h"
@@ -60,6 +61,17 @@ void loop() {
     }
     Serial.println("Authentication successful!");
 
+    // Create pinger task
+    TaskHandle_t pingerTask;
+    xTaskCreate(
+      PingClient,
+      "Pinger",
+      4000,
+      &bstate,
+      1,
+      &pingerTask
+    );
+
     // Make client join #osu
     Serial.println("Sending join #osu to client");
     sendChannelJoin(&bstate, "#osu", CHO_PACKET_CHANNEL_AVAILABLE_AUTOJOIN);
@@ -77,6 +89,8 @@ void loop() {
             Serial.println("Received RequestStatus");
             sendUserStats(&bstate);
             break;
+          case CHO_PACKET_PONG:
+            break;
           default:
             Serial.printf("Unknown packet received: %d\n", h.packetId);
         }
@@ -86,6 +100,7 @@ void loop() {
       }
     }
 
+    bstate.alive = false;
     client.stop();
     Serial.println("Dropping connection!");
   }

@@ -7,7 +7,7 @@
 #include "bancho/BanchoHeader.h"
 #include "bancho/BanchoPackets.h"
 #include "bancho/UserStats.h"
-#include "bancho/ChannelAvailableAutojoin.h"
+#include "bancho/ChannelAvailable.h"
 
 LoginPacket getConnectionInfo(WiFiClient client) {
     LoginPacket lp;
@@ -58,18 +58,29 @@ void sendUserStats(WiFiClient client) {
     client.flush();
 }
 
-void sendChannelAutojoin(WiFiClient client, char channelName[]) {
-    ChannelAvailableAutojoin p;
+void sendChannelJoin(WiFiClient client, char *channelName, int packetType) {
+    // This packet needs to be of type ChannelAvailable or ChannelAvailableAutojoin
+    switch (packetType) {
+        case CHO_PACKET_CHANNEL_AVAILABLE:
+        case CHO_PACKET_CHANNEL_AVAILABLE_AUTOJOIN:
+        case CHO_PACKET_CHANNEL_JOIN_SUCCESS:
+            break;
+        default:
+            Serial.println("Attempted to use wrong type for sendChannelJoin()!");
+            return;
+    }
+    
+    ChannelAvailable p;
     p.channelName = (char*)malloc(strlen(channelName) + 1);
     strncpy(p.channelName, channelName, strlen(channelName) + 1);
 
     BanchoHeader h;
-    h.packetId = CHO_PACKET_CHANNEL_AVAILABLE_AUTOJOIN;
+    h.packetId = packetType;
     h.compression = false;
-    h.size = ChannelAvailableAutojoin_Size(p);
+    h.size = ChannelAvailable_Size(p);
 
     BanchoHeader_Write(h, client);
-    ChannelAvailableAutojoin_Write(p, client);
+    ChannelAvailable_Write(p, client);
     client.flush();
 
     free(p.channelName);

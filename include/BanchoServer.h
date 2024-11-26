@@ -8,7 +8,7 @@
 BanchoHeader readBanchoPacket(WiFiClient client, char *buf);
 LoginPacket getConnectionInfo(WiFiClient client);
 void sendUserStats(WiFiClient client);
-void sendChannelAutojoin(WiFiClient client, char *channelName);
+void sendChannelJoin(WiFiClient client, char *channelName, int packetType);
 bool authenticateChoUser(WiFiClient client, char *login, char *password);
 
 #endif

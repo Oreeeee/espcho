@@ -55,7 +55,8 @@ void loop() {
 
     // Make client join #osu
     Serial.println("Sending join #osu to client");
-    sendChannelAutojoin(client, "#osu");
+    sendChannelJoin(client, "#osu", CHO_PACKET_CHANNEL_AVAILABLE_AUTOJOIN);
+    sendChannelJoin(client, "#osu", CHO_PACKET_CHANNEL_JOIN_SUCCESS);
     Serial.println("Sent #osu request");
 
     while (client.connected()) {

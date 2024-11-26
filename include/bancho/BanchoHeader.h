@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <WiFi.h>
+#include "BanchoState.h"
 
 typedef struct {
     uint16_t packetId;
@@ -11,6 +12,6 @@ typedef struct {
 } BanchoHeader;
 
 BanchoHeader BanchoHeader_Read(WiFiClient client);
-void BanchoHeader_Write(BanchoHeader p, WiFiClient client);
+void BanchoHeader_Write(BanchoHeader p, BanchoState *bstate);
 
 #endif

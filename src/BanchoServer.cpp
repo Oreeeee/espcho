@@ -8,6 +8,7 @@
 #include "bancho/BanchoPackets.h"
 #include "bancho/UserStats.h"
 #include "bancho/ChannelAvailable.h"
+#include "BanchoState.h"
 
 LoginPacket getConnectionInfo(WiFiClient client) {
     LoginPacket lp;
@@ -37,7 +38,7 @@ BanchoHeader readBanchoPacket(WiFiClient client, char *buf) {
     return h;
 }
 
-void sendUserStats(WiFiClient client) {
+void sendUserStats(BanchoState *bstate) {
     UserStats p;
     p.userId = CHO_APPROVED_USERID;
     p.completness = 0;
@@ -53,12 +54,11 @@ void sendUserStats(WiFiClient client) {
     //h.size = UserStats_Size(p);
     h.size = 11; // TODO : Calculate this automatically, dynamic calculations cause crashes
 
-    BanchoHeader_Write(h, client);
-    UserStats_Write(p, client);
-    client.flush();
+    BanchoHeader_Write(h, bstate);
+    UserStats_Write(p, bstate);
 }
 
-void sendChannelJoin(WiFiClient client, char *channelName, int packetType) {
+void sendChannelJoin(BanchoState *bstate, char *channelName, int packetType) {
     // This packet needs to be of type ChannelAvailable or ChannelAvailableAutojoin
     switch (packetType) {
         case CHO_PACKET_CHANNEL_AVAILABLE:
@@ -79,14 +79,22 @@ void sendChannelJoin(WiFiClient client, char *channelName, int packetType) {
     h.compression = false;
     h.size = ChannelAvailable_Size(p);
 
-    BanchoHeader_Write(h, client);
-    ChannelAvailable_Write(p, client);
-    client.flush();
+    BanchoHeader_Write(h, bstate);
+    ChannelAvailable_Write(p, bstate);
 
     free(p.channelName);
 }
 
-bool authenticateChoUser(WiFiClient client, char *login, char *password) {
+void sendEmptyPacket(BanchoState *bstate, int packetType) {
+    BanchoHeader h;
+    h.packetId = packetType;
+    h.compression = false;
+    h.size = 0;
+
+    BanchoHeader_Write(h, bstate);
+}
+
+bool authenticateChoUser(BanchoState *bstate, char *login, char *password) {
     BanchoHeader h;
     h.packetId = CHO_PACKET_LOGINREPLY;
     h.compression = false;
@@ -96,18 +104,16 @@ bool authenticateChoUser(WiFiClient client, char *login, char *password) {
         LoginReply p;
         p.response = CHO_APPROVED_USERID;
         
-        BanchoHeader_Write(h, client);
-        LoginReply_Write(p, client);
-        client.flush();
+        BanchoHeader_Write(h, bstate);
+        LoginReply_Write(p, bstate);
         return true;
     }
 
     LoginReply p;
     p.response = LOGIN_WRONG_PASS;
 
-    BanchoHeader_Write(h, client);
-    LoginReply_Write(p, client);
-    client.flush();
+    BanchoHeader_Write(h, bstate);
+    LoginReply_Write(p, bstate);
 
     return false;
 }

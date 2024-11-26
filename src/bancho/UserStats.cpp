@@ -1,4 +1,5 @@
 #include "bancho/UserStats.h"
+#include "BanchoState.h"
 #include <WiFi.h>
 
 uint32_t UserStats_Size(UserStats p) {
@@ -12,12 +13,21 @@ uint32_t UserStats_Size(UserStats p) {
         sizeof(p.mods);
 }
 
-void UserStats_Write(UserStats p, WiFiClient client) {
-    client.write((char*)&p.userId, sizeof(p.userId));
-    client.write((char*)&p.completness, sizeof(p.completness));
-    client.write((char*)&p.status, sizeof(p.status));
-    client.write((char*)&p.beatmapUpdate, sizeof(p.beatmapUpdate));
-    client.write("\x00", 1); // TODO
-    client.write("\x00", 1); // TODO
-    client.write((char*)&p.mods, sizeof(p.mods));
+void UserStats_Write(UserStats p, BanchoState *bstate) {
+    bool writing = true;
+    while (writing) {
+        if (!bstate->writeLock) {
+            bstate->writeLock = true;
+            bstate->client.write((char*)&p.userId, sizeof(p.userId));
+            bstate->client.write((char*)&p.completness, sizeof(p.completness));
+            bstate->client.write((char*)&p.status, sizeof(p.status));
+            bstate->client.write((char*)&p.beatmapUpdate, sizeof(p.beatmapUpdate));
+            bstate->client.write("\x00", 1); // TODO
+            bstate->client.write("\x00", 1); // TODO
+            bstate->client.write((char*)&p.mods, sizeof(p.mods));
+            bstate->client.flush();
+            bstate->writeLock = false;
+            writing = false;
+        }
+    }
 }

@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <WiFi.h>
+#include "BanchoState.h"
 
 typedef struct {
     int32_t userId;
@@ -15,6 +16,6 @@ typedef struct {
 } UserStats;
 
 uint32_t UserStats_Size(UserStats p);
-void UserStats_Write(UserStats p, WiFiClient client);
+void UserStats_Write(UserStats p, BanchoState *bstate);
 
 #endif

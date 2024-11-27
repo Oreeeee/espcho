@@ -14,13 +14,7 @@ uint32_t UserStats_Size(UserStats p) {
         sizeof(p.beatmapID);
     
     // Get size of osu! strings
-    char *statusText;
-    char *beatmapMD5;
-    packetSize += WriteOsuString(p.statusText, &statusText) +
-        WriteOsuString(p.beatmapMD5, &beatmapMD5);
-    
-    free(statusText);
-    free(beatmapMD5);
+    packetSize += OsuStringSize(p.statusText) + OsuStringSize(p.beatmapMD5);
 
     if (p.completness == CHO_STATS_STATISTICS) {
         packetSize += sizeof(p.rankedScore) +
@@ -47,10 +41,8 @@ void UserStats_Write(UserStats p, BanchoState *bstate) {
             bstate->client.write((char*)&p.completness, sizeof(p.completness));
             bstate->client.write((char*)&p.status, sizeof(p.status));
             bstate->client.write((char*)&p.beatmapUpdate, sizeof(p.beatmapUpdate));
-            if (p.beatmapUpdate) {
-                bstate->client.write(statusText, strlen(statusText));
-                bstate->client.write(beatmapMD5, strlen(beatmapMD5));
-            }
+            bstate->client.write(statusText, strlen(statusText));
+            bstate->client.write(beatmapMD5, strlen(beatmapMD5));
             bstate->client.write((char*)&p.mods, sizeof(p.mods));
             bstate->client.write((char*)&p.mode, sizeof(p.mode));
             bstate->client.write((char*)&p.beatmapID, sizeof(p.beatmapID));

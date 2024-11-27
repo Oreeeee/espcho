@@ -38,3 +38,19 @@ int WriteOsuString(char *in, char **out) {
 
     return outStringSize;
 }
+
+int OsuStringSize(char *in) {
+    int outStringSize = 1;
+
+    if (in == NULL || strlen(in) == 0) {
+        return outStringSize;
+    }
+
+    char *ulebBuf = (char*)calloc(10, sizeof(char));
+    int ulebSize = encode_uleb128(strlen(in), &ulebBuf);
+    free(ulebBuf);
+    outStringSize += ulebSize;
+    outStringSize += strlen(in);
+
+    return outStringSize;
+}

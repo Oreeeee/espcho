@@ -5,11 +5,7 @@
 #include <stdint.h>
 
 uint32_t ChannelAvailable_Size(ChannelAvailable p) {
-    int packetSize = 0;
-    char *channelName;
-    packetSize += WriteOsuString(p.channelName, &channelName);
-    free(channelName);
-    return packetSize;
+    return OsuStringSize(p.channelName);
 }
 
 void ChannelAvailable_Write(ChannelAvailable p, BanchoState *bstate) {

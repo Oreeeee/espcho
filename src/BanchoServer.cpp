@@ -50,7 +50,7 @@ void sendUserStats(BanchoState *bstate, uint8_t completness) {
 
     if (completness == CHO_STATS_STATISTICS) {
         p.rankedScore = 20000;
-        p.accuracy = 99.98;
+        p.accuracy = 0.9998;
         p.playcount = 0xFFFFFFFF;
         p.totalScore = 200000;
         p.rank = 1;

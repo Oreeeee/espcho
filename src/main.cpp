@@ -78,6 +78,9 @@ void loop() {
     sendChannelJoin(&bstate, "#osu", CHO_PACKET_CHANNEL_JOIN_SUCCESS);
     Serial.println("Sent #osu request");
 
+    // Initial user stats send, for some reason osu! doesn't request them when using "Remember password"
+    sendUserStats(&bstate);
+
     while (client.connected()) {
       if (client.available()) {
         char *buf;

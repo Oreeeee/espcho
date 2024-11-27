@@ -44,8 +44,10 @@ void sendUserStats(BanchoState *bstate, uint8_t completness) {
     p.completness = completness;
     p.status = 0;
     p.beatmapUpdate = true;
-    // p.statusText = (char*)calloc(1, sizeof(char));
-    // p.beatmapMD5 = (char*)calloc(1, sizeof(char));
+    p.statusText = (char*)calloc(2, sizeof(char));
+    p.statusText[0] = ' ';
+    p.beatmapMD5 = (char*)calloc(2, sizeof(char));
+    p.beatmapMD5[0] = ' ';
     p.mods = 0;
 
     if (completness == CHO_STATS_STATISTICS) {

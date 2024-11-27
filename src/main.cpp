@@ -79,7 +79,7 @@ void loop() {
     Serial.println("Sent #osu request");
 
     // Initial user stats send, for some reason osu! doesn't request them when using "Remember password"
-    sendUserStats(&bstate);
+    sendUserStats(&bstate, CHO_STATS_STATISTICS);
 
     while (client.connected()) {
       if (client.available()) {
@@ -90,7 +90,7 @@ void loop() {
         switch (h.packetId) {
           case CHO_PACKET_REQUEST_STATUS:
             Serial.println("Received RequestStatus");
-            sendUserStats(&bstate);
+            sendUserStats(&bstate, CHO_STATS_STATUS);
             break;
           case CHO_PACKET_PONG:
             break;

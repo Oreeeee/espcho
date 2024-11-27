@@ -38,21 +38,29 @@ BanchoHeader readBanchoPacket(WiFiClient client, char *buf) {
     return h;
 }
 
-void sendUserStats(BanchoState *bstate) {
+void sendUserStats(BanchoState *bstate, uint8_t completness) {
     UserStats p;
     p.userId = CHO_APPROVED_USERID;
-    p.completness = 0;
+    p.completness = completness;
     p.status = 0;
-    p.beatmapUpdate = false;
-    //p.statusText = (char*)calloc(1, sizeof(char)); // TODO
-    //p.beatmapMD5 = (char*)calloc(1, sizeof(char)); // TODO
+    p.beatmapUpdate = true;
+    // p.statusText = (char*)calloc(1, sizeof(char));
+    // p.beatmapMD5 = (char*)calloc(1, sizeof(char));
     p.mods = 0;
+
+    if (completness == CHO_STATS_STATISTICS) {
+        p.rankedScore = 20000;
+        p.accuracy = 99.98;
+        p.playcount = 0xFFFFFFFF;
+        p.totalScore = 200000;
+        p.rank = 1;
+    }
 
     BanchoHeader h;
     h.packetId = CHO_PACKET_USER_STATS;
     h.compression = false;
-    //h.size = UserStats_Size(p);
-    h.size = 11; // TODO : Calculate this automatically, dynamic calculations cause crashes
+    h.size = UserStats_Size(p);
+    //h.size = 11; // TODO : Calculate this automatically, dynamic calculations cause crashes
 
     BanchoHeader_Write(h, bstate);
     UserStats_Write(p, bstate);

@@ -22,4 +22,7 @@
 /* Uncomment to disable brownout detector */
 //#define CHO_DISABLE_BROWOUT
 
+/* Uncomment to show logs from Pinger */
+//#define CHO_LOG_PINGER
+
 #endif

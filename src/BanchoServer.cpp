@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <WiFi.h>
+#include <AsyncTCP.h>
 #include "config.h"
 #include "constants.h"
 #include "bancho/LoginPacket.h"
@@ -9,6 +10,7 @@
 #include "bancho/UserStats.h"
 #include "bancho/ChannelAvailable.h"
 #include "BanchoState.h"
+#include "BanchoState2.h"
 
 LoginPacket getConnectionInfo(WiFiClient client) {
     LoginPacket lp;
@@ -126,4 +128,73 @@ bool authenticateChoUser(BanchoState *bstate, char *login, char *password) {
     LoginReply_Write(p, bstate);
 
     return false;
+}
+
+void handleLoginData(void *arg, AsyncClient *client, void *data, size_t len) {
+    BanchoState2 *bstate = (BanchoState2*)arg;
+
+    if (!bstate->authenticated) {
+        Serial.printf("Received data: ");
+        Serial.write((char*)data, len);
+
+        Serial.println("Copying data to *line");
+        char *line = (char*)malloc(len);
+        strncpy(line, (char*)data, len);
+        
+        // Strip data out of \r\n
+        Serial.println("Stripping lines");
+        line[len - 1] = '\x00';
+        line[len - 2] = '\x00';
+
+        switch (bstate->currentlyReadingLine) {
+            case 0: // Username
+                strncpy(bstate->username, line, len);
+                break;
+            case 1: // Password
+                strncpy(bstate->password, line, len);
+                break;
+            case 2: // Client info
+                strncpy(bstate->clientInfo, line, len);
+                Serial.printf("Login packet: %s, %s, %s", bstate->username, bstate->password, bstate->clientInfo);
+
+                free(bstate->username);
+                free(bstate->password);
+                free(bstate->clientInfo);
+                break;
+        }
+    }
+    
+}
+
+void handleBanchoConnection(void *arg, AsyncClient *client) {
+    Serial.printf("Accepted connection from %s:%d\n", client->remoteIP().toString(), client->remotePort());
+
+    BanchoState2 bstate;
+
+    /*
+    client->onError(NULL, NULL);
+    client->onDisconnect(NULL, NULL);
+    client->onTimeout(NULL, NULL);
+    */
+
+    client->onData(&handleLoginData, &bstate);
+
+    /*
+
+    LoginPacket lp = getConnectionInfo(client);
+    Serial.printf("Username: %s\nPassword: %s\nClient info: %s\n", lp.username, lp.password, lp.clientInfo);
+
+    BanchoState bstate;
+    bstate.client = client;
+    bstate.writeLock = false;
+    bstate.alive = true;
+
+    Serial.println("Verifying login");
+    if (!authenticateChoUser(&bstate, lp.username, lp.password)) {
+      Serial.println("Authentication failed! Server dropping conenction");
+      bstate.alive = false;
+      client.stop();
+    }
+    Serial.println("Authentication successful!");
+    */
 }

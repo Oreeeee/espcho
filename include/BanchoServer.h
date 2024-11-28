@@ -2,6 +2,7 @@
 #define BANCHOSERVER_H
 
 #include <WiFi.h>
+#include <AsyncTCP.h>
 #include "bancho/LoginPacket.h"
 #include "bancho/BanchoHeader.h"
 #include "BanchoState.h"
@@ -12,5 +13,6 @@ void sendUserStats(BanchoState *bstate, uint8_t completness);
 void sendChannelJoin(BanchoState *bstate, char *channelName, int packetType);
 void sendEmptyPacket(BanchoState *bstate, int packetType);
 bool authenticateChoUser(BanchoState *bstate, char *login, char *password);
+void handleBanchoConnection(void *arg, AsyncClient *client);
 
 #endif

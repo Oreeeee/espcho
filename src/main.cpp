@@ -2,6 +2,7 @@
 #include <WiFi.h>
 #include <WiFiServer.h>
 #include <WiFiClient.h>
+#include <AsyncTCP.h>
 #include "config.h"
 #include "constants.h"
 #include "BanchoServer.h"
@@ -14,7 +15,7 @@
 #include "soc/rtc_cntl_reg.h"
 #endif
 
-WiFiServer server(CHO_PORT);
+AsyncServer server(CHO_PORT);
 
 void setup() {
   #ifdef CHO_DISABLE_BROWNOUT
@@ -36,11 +37,13 @@ void setup() {
   Serial.printf("Connected to WiFI! Got IPv4: %s\n", WiFi.localIP().toString());
 
   Serial.printf("Starting TCP server on port %d\n", CHO_PORT);
+  server.onClient(&handleBanchoConnection, &server);
   server.begin();
   Serial.println("Listening...");
 }
 
 void loop() {
+  /*
   WiFiClient client = server.available();
   if (client) {
     Serial.printf("Accepted connection from %s:%d\n", client.remoteIP().toString(), client.remotePort());
@@ -107,4 +110,5 @@ void loop() {
     client.stop();
     Serial.println("Dropping connection!");
   }
+  */
 }

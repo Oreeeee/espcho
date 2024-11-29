@@ -8,6 +8,8 @@
 #include "bancho/BanchoPackets.h"
 #include "BanchoState.h"
 #include "Pinger.h"
+#include "Globals.h"
+#include "ThreadingUtils.h"
 
 #ifdef CHO_DISABLE_BROWNOUT
 #include "soc/soc.h"
@@ -44,67 +46,40 @@ void loop() {
   WiFiClient client = server.available();
   if (client) {
     Serial.printf("Accepted connection from %s:%d\n", client.remoteIP().toString(), client.remotePort());
+    Serial.println("Trying to start Bancho task");
 
-    LoginPacket lp = getConnectionInfo(client);
-    Serial.printf("Username: %s\nPassword: %s\nClient info: %s\n", lp.username, lp.password, lp.clientInfo);
+    int freeBanchoIndex = getFreeBanchoIndex();
+    int freeTaskIndex = getFreeTaskIndex();
 
-    BanchoState bstate;
-    bstate.client = client;
-    bstate.writeLock = false;
-    bstate.alive = true;
-
-    Serial.println("Verifying login");
-    if (!authenticateChoUser(&bstate, lp.username, lp.password)) {
-      Serial.println("Authentication failed! Server dropping conenction");
-      bstate.alive = false;
+    if (freeBanchoIndex == -1) {
+      Serial.println("No free Bancho slots left, dropping connection");
       client.stop();
+      return;
     }
-    Serial.println("Authentication successful!");
 
-    // Create pinger task
+    if (freeTaskIndex == -1) {
+      Serial.println("No free task slots left, dropping connection");
+      client.stop();
+      return;
+    }
+
+    BanchoArgs *banchoArgs = (BanchoArgs*)malloc(sizeof(BanchoArgs));
+    banchoArgs->banchoIndex = freeBanchoIndex;
+    banchoArgs->taskIndex = freeTaskIndex;
+
+    clients[freeBanchoIndex] = client;
+
+    Serial.println("Starting Bancho task");
     TaskHandle_t pingerTask;
     xTaskCreate(
-      PingClient,
+      banchoTask,
       "Pinger",
-      4000,
-      &bstate,
+      12000,
+      banchoArgs,
       1,
-      &pingerTask
+      &banchoTasks[freeTaskIndex]
     );
-
-    // Make client join #osu
-    Serial.println("Sending join #osu to client");
-    sendChannelJoin(&bstate, "#osu", CHO_PACKET_CHANNEL_AVAILABLE_AUTOJOIN);
-    sendChannelJoin(&bstate, "#osu", CHO_PACKET_CHANNEL_JOIN_SUCCESS);
-    Serial.println("Sent #osu request");
-
-    // Initial user stats send, for some reason osu! doesn't request them when using "Remember password"
-    sendUserStats(&bstate, CHO_STATS_STATISTICS);
-
-    while (client.connected()) {
-      if (client.available()) {
-        char *buf;
-        BanchoHeader h;
-        h = readBanchoPacket(client, buf);
-
-        switch (h.packetId) {
-          case CHO_PACKET_REQUEST_STATUS:
-            Serial.println("Received RequestStatus");
-            sendUserStats(&bstate, CHO_STATS_STATUS);
-            break;
-          case CHO_PACKET_PONG:
-            break;
-          default:
-            Serial.printf("Unknown packet received: %d\n", h.packetId);
-        }
-
-        //if (buf != NULL)
-        free(buf);
-      }
-    }
-
-    bstate.alive = false;
-    client.stop();
-    Serial.println("Dropping connection!");
+    Serial.println("Started Bancho task");
+    taskActive[freeTaskIndex] = true;
   }
 }

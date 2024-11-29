@@ -19,6 +19,10 @@
 #define CHO_APPROVED_PASSWORD "cad6c40404b487337334537b29608ffc" // recorderinthesandybridge
 #define CHO_APPROVED_USERID 2
 
+
+/* Max connections on Bancho at the same time */
+#define CHO_MAX_CONNECTIONS 5
+
 /* Uncomment to disable brownout detector */
 //#define CHO_DISABLE_BROWOUT
 

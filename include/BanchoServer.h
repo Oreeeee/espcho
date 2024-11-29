@@ -12,5 +12,6 @@ void sendUserStats(BanchoState *bstate, uint8_t completness);
 void sendChannelJoin(BanchoState *bstate, char *channelName, int packetType);
 void sendEmptyPacket(BanchoState *bstate, int packetType);
 bool authenticateChoUser(BanchoState *bstate, char *login, char *password);
+void banchoTask(void *arg);
 
 #endif

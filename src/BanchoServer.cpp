@@ -161,10 +161,10 @@ void banchoTask(void *arg) {
 
         // Create pinger task
         TaskHandle_t pingerTask;
-            xTaskCreate(
+        xTaskCreate(
             PingClient,
             "Pinger",
-            4000,
+            1536,
             &bstate,
             1,
             &pingerTask

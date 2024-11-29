@@ -73,8 +73,8 @@ void loop() {
     TaskHandle_t pingerTask;
     xTaskCreate(
       banchoTask,
-      "Pinger",
-      12000,
+      "Bancho",
+      4096,
       banchoArgs,
       1,
       &banchoTasks[freeTaskIndex]

@@ -155,7 +155,7 @@ void banchoTask(void *arg) {
             taskActive[args->taskIndex] = false;
             free(args);
 
-            return;
+            vTaskDelete(NULL);
         }
         Serial.println("Authentication successful!");
 
@@ -207,6 +207,6 @@ void banchoTask(void *arg) {
         taskActive[args->taskIndex] = false;
         free(args);
 
-        return;
+        vTaskDelete(NULL);
     }
 }

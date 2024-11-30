@@ -41,9 +41,9 @@ BanchoHeader readBanchoPacket(WiFiClient client, char *buf) {
     return h;
 }
 
-void sendUserStats(BanchoState *bstate, uint8_t completness) {
+void sendUserStats(BanchoState *bstate, uint32_t userId, char *username, uint8_t completness) {
     UserStats p;
-    p.userId = CHO_APPROVED_USERID;
+    p.userId = userId;
     p.completness = completness;
     p.status = 0;
     p.beatmapUpdate = true;
@@ -53,12 +53,20 @@ void sendUserStats(BanchoState *bstate, uint8_t completness) {
     p.beatmapMD5[0] = ' ';
     p.mods = 0;
 
-    if (completness == CHO_STATS_STATISTICS) {
+    if (completness >= CHO_STATS_STATISTICS) {
         p.rankedScore = 20000;
         p.accuracy = 0.9998;
         p.playcount = 0xFFFFFFFF;
         p.totalScore = 200000;
         p.rank = 1;
+    }
+
+    if (completness == CHO_STATS_FULL) {
+        p.username = (char*)malloc(strlen(username) + 1);
+        strncpy(p.username, username, strlen(username) + 1);
+        p.avatarFilename = (char*)calloc(2, sizeof(char));
+        p.avatarFilename[0] = ' ';
+        p.city = "peppy's hidden bunker";
     }
 
     BanchoHeader h;
@@ -107,7 +115,7 @@ void sendEmptyPacket(BanchoState *bstate, int packetType) {
     BanchoHeader_Write(h, bstate);
 }
 
-bool authenticateChoUser(BanchoState *bstate, char *login, char *password) {
+bool authenticateChoUser(BanchoState *bstate, char *login, char *password, BanchoConnection *bconn) {
     BanchoHeader h;
     h.packetId = CHO_PACKET_LOGINREPLY;
     h.compression = false;
@@ -119,9 +127,12 @@ bool authenticateChoUser(BanchoState *bstate, char *login, char *password) {
     if (strcmp(CHO_APPROVED_USER, login) == 0 && strcmp(CHO_APPROVED_PASSWORD, password) == 0) {
     #endif
         LoginReply p;
+
         #ifdef CHO_DISABLE_AUTH
         srand(time(NULL));
-        p.response = rand() % 20000 + 1;
+        uint32_t userId = rand() % 20000 + 1;
+        p.response = userId;
+        bconn->userId = userId;
         #else
         p.response = CHO_APPROVED_USERID;
         #endif
@@ -156,7 +167,7 @@ void banchoTask(void *arg) {
         bstate.alive = true;
 
         Serial.println("Verifying login");
-        if (!authenticateChoUser(&bstate, lp.username, lp.password)) {
+        if (!authenticateChoUser(&bstate, lp.username, lp.password, bconn)) {
             Serial.println("Authentication failed! Server dropping conenction");
             bstate.alive = false;
             bconn->client.stop();
@@ -166,6 +177,8 @@ void banchoTask(void *arg) {
             vTaskDelete(NULL);
         }
         Serial.println("Authentication successful!");
+        bconn->username = (char*)malloc(strlen(lp.username) + 1);
+        strncpy(bconn->username, lp.username, strlen(lp.username) + 1);
 
         // Create pinger task
         TaskHandle_t pingerTask;
@@ -185,7 +198,7 @@ void banchoTask(void *arg) {
         Serial.println("Sent #osu request");
 
         // Initial user stats send, for some reason osu! doesn't request them when using "Remember password"
-        sendUserStats(&bstate, CHO_STATS_STATISTICS);
+        sendUserStats(&bstate, bconn->userId, bconn->username, CHO_STATS_STATISTICS);
 
         while (bconn->client.connected()) {
             if (bconn->client.available()) {
@@ -196,7 +209,16 @@ void banchoTask(void *arg) {
                 switch (h.packetId) {
                 case CHO_PACKET_REQUEST_STATUS:
                     Serial.println("Received RequestStatus");
-                    sendUserStats(&bstate, CHO_STATS_STATUS);
+                    sendUserStats(&bstate, bconn->userId, bconn->username, CHO_STATS_STATISTICS);
+                    break;
+                case CHO_PACKET_RECEIVE_UPDATES:
+                    Serial.println("Client wants to receive status updates");
+                    for (int i = 0; i < CHO_MAX_CONNECTIONS; i++) {
+                        BanchoConnection user = connections[i];
+                        if (user.active) {
+                            sendUserStats(&bstate, user.userId, user.username, CHO_STATS_FULL);
+                        }
+                    }
                     break;
                 case CHO_PACKET_PONG:
                     break;
@@ -215,6 +237,8 @@ void banchoTask(void *arg) {
         bconn->client.stop();
         Serial.println("Marking connection as free");
         bconn->active = false;
+        Serial.println("Freeing username");
+        free(bconn->username);
         // Serial.println("Freeing bconn");
         // free(bconn);
 

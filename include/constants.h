@@ -12,4 +12,9 @@
 #define CHO_STATS_STATISTICS 1
 #define CHO_STATS_FULL 2
 
+/* Presence filter */
+#define CHO_PRESENCE_FILTER_NOPLAYERS 0
+#define CHO_PRESENCE_FILTER_ALL 1
+#define CHO_PRESENCE_FILTER_FRIENDS 2
+
 #endif

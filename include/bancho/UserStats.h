@@ -29,6 +29,7 @@ typedef struct {
     int32_t rank;
 
     /* Full */
+    
     char *username;
     char *avatarFilename;
     uint8_t timezone;

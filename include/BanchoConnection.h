@@ -3,12 +3,15 @@
 
 #include <Arduino.h>
 #include <WiFi.h>
+#include <stdint.h>
 
 typedef struct {
     WiFiClient client;
     TaskHandle_t task;
     int index;
     bool active;
+    char *username;
+    uint32_t userId;
 } BanchoConnection;
 
 #endif

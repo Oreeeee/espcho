@@ -133,17 +133,16 @@ bool authenticateChoUser(BanchoState *bstate, char *login, char *password) {
 
 void banchoTask(void *arg) {
     Serial.println("Hello from task");
-    BanchoArgs *args = (BanchoArgs*)arg;
-    WiFiClient client = clients[args->banchoIndex];
+    BanchoConnection *bconn = (BanchoConnection*)arg;
     Serial.println("Got variables");
 
-    if (client) {
+    if (bconn->client) {
         Serial.println("Trying to get connection info...");
-        LoginPacket lp = getConnectionInfo(client);
+        LoginPacket lp = getConnectionInfo(bconn->client);
         Serial.printf("Username: %s\nPassword: %s\nClient info: %s\n", lp.username, lp.password, lp.clientInfo);
 
         BanchoState bstate;
-        bstate.client = client;
+        bstate.client = bconn->client;
         bstate.writeLock = false;
         bstate.alive = true;
 
@@ -151,9 +150,9 @@ void banchoTask(void *arg) {
         if (!authenticateChoUser(&bstate, lp.username, lp.password)) {
             Serial.println("Authentication failed! Server dropping conenction");
             bstate.alive = false;
-            client.stop();
-            taskActive[args->taskIndex] = false;
-            free(args);
+            bconn->client.stop();
+            bconn->active = false;
+            free(bconn);
 
             vTaskDelete(NULL);
         }
@@ -179,11 +178,11 @@ void banchoTask(void *arg) {
         // Initial user stats send, for some reason osu! doesn't request them when using "Remember password"
         sendUserStats(&bstate, CHO_STATS_STATISTICS);
 
-        while (client.connected()) {
-            if (client.available()) {
+        while (bconn->client.connected()) {
+            if (bconn->client.available()) {
                 char *buf;
                 BanchoHeader h;
-                h = readBanchoPacket(client, buf);
+                h = readBanchoPacket(bconn->client, buf);
 
                 switch (h.packetId) {
                 case CHO_PACKET_REQUEST_STATUS:
@@ -203,10 +202,14 @@ void banchoTask(void *arg) {
 
         Serial.println("Dropping connection!");
         bstate.alive = false;
-        client.stop();
-        taskActive[args->taskIndex] = false;
-        free(args);
+        Serial.println("Stopping client");
+        bconn->client.stop();
+        Serial.println("Marking connection as free");
+        bconn->active = false;
+        // Serial.println("Freeing bconn");
+        // free(bconn);
 
+        Serial.println("Exitting task");
         vTaskDelete(NULL);
     }
 }

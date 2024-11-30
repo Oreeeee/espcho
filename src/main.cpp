@@ -48,38 +48,30 @@ void loop() {
     Serial.printf("Accepted connection from %s:%d\n", client.remoteIP().toString(), client.remotePort());
     Serial.println("Trying to start Bancho task");
 
-    int freeBanchoIndex = getFreeBanchoIndex();
-    int freeTaskIndex = getFreeTaskIndex();
+    int freeConnIndex = getFreeConnectionIndex();
 
-    if (freeBanchoIndex == -1) {
-      Serial.println("No free Bancho slots left, dropping connection");
+    if (freeConnIndex == -1) {
+      Serial.println("No free connection slots left, dropping connection");
       client.stop();
       return;
     }
 
-    if (freeTaskIndex == -1) {
-      Serial.println("No free task slots left, dropping connection");
-      client.stop();
-      return;
-    }
+    BanchoConnection bconn;
+    bconn.client = client;
+    bconn.index = freeConnIndex;
+    bconn.active = true;
 
-    BanchoArgs *banchoArgs = (BanchoArgs*)malloc(sizeof(BanchoArgs));
-    banchoArgs->banchoIndex = freeBanchoIndex;
-    banchoArgs->taskIndex = freeTaskIndex;
-
-    clients[freeBanchoIndex] = client;
+    connections[freeConnIndex] = bconn;
 
     Serial.println("Starting Bancho task");
-    TaskHandle_t pingerTask;
     xTaskCreate(
       banchoTask,
       "Bancho",
       4096,
-      banchoArgs,
+      &connections[freeConnIndex],
       1,
-      &banchoTasks[freeTaskIndex]
+      &bconn.task
     );
     Serial.println("Started Bancho task");
-    taskActive[freeTaskIndex] = true;
   }
 }

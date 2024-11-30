@@ -45,13 +45,13 @@ void sendUserStats(BanchoState *bstate, uint32_t userId, char *username, uint8_t
     UserStats p;
     p.userId = userId;
     p.completness = completness;
-    p.status = 0;
-    p.beatmapUpdate = true;
-    p.statusText = (char*)calloc(2, sizeof(char));
-    p.statusText[0] = ' ';
-    p.beatmapMD5 = (char*)calloc(2, sizeof(char));
-    p.beatmapMD5[0] = ' ';
-    p.mods = 0;
+    p.statusUpdate.status = 0;
+    p.statusUpdate.beatmapUpdate = true;
+    p.statusUpdate.statusText = (char*)calloc(2, sizeof(char));
+    p.statusUpdate.statusText[0] = ' ';
+    p.statusUpdate.beatmapMD5 = (char*)calloc(2, sizeof(char));
+    p.statusUpdate.beatmapMD5[0] = ' ';
+    p.statusUpdate.mods = 0;
 
     if (completness >= CHO_STATS_STATISTICS) {
         p.rankedScore = 20000;

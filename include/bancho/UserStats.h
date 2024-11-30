@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <WiFi.h>
+#include "datatypes/StatusUpdate.h"
 #include "BanchoState.h"
 
 /* TODO: Optimise completness */
@@ -12,13 +13,7 @@ typedef struct {
 
     int32_t userId;
     uint8_t completness;
-    uint8_t status;
-    bool beatmapUpdate;
-    char *statusText;
-    char *beatmapMD5;
-    uint16_t mods;
-    uint8_t mode;
-    int32_t beatmapID;
+    StatusUpdate statusUpdate;
 
     /* Statistics */
 
@@ -29,7 +24,7 @@ typedef struct {
     int32_t rank;
 
     /* Full */
-    
+
     char *username;
     char *avatarFilename;
     uint8_t timezone;

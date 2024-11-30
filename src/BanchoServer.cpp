@@ -113,9 +113,18 @@ bool authenticateChoUser(BanchoState *bstate, char *login, char *password) {
     h.compression = false;
     h.size = sizeof(LoginReply);
 
+    #ifdef CHO_DISABLE_AUTH
+    if (true) {
+    #else
     if (strcmp(CHO_APPROVED_USER, login) == 0 && strcmp(CHO_APPROVED_PASSWORD, password) == 0) {
+    #endif
         LoginReply p;
+        #ifdef CHO_DISABLE_AUTH
+        srand(time(NULL));
+        p.response = rand() % 20000 + 1;
+        #else
         p.response = CHO_APPROVED_USERID;
+        #endif
         
         BanchoHeader_Write(h, bstate);
         LoginReply_Write(p, bstate);

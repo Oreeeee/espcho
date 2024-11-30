@@ -23,6 +23,10 @@
 /* Max connections on Bancho at the same time */
 #define CHO_MAX_CONNECTIONS 5
 
+/* Uncomment to disable authentication checks */
+/* This also generates a random user id for users */
+// #define CHO_DISABLE_AUTH
+
 /* Uncomment to disable brownout detector */
 //#define CHO_DISABLE_BROWOUT
 

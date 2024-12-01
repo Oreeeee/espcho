@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include <stdint.h>
+#include "datatypes/StatusUpdate.h"
 
 typedef struct {
     WiFiClient client;
@@ -12,6 +13,7 @@ typedef struct {
     bool active;
     char *username;
     uint32_t userId;
+    StatusUpdate statusUpdate;
 } BanchoConnection;
 
 #endif

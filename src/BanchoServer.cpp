@@ -41,17 +41,11 @@ BanchoHeader readBanchoPacket(WiFiClient client, char *buf) {
     return h;
 }
 
-void sendUserStats(BanchoState *bstate, uint32_t userId, char *username, uint8_t completness) {
+void sendUserStats(BanchoState *bstate, uint32_t userId, char *username, StatusUpdate statusUpdate, uint8_t completness) {
     UserStats p;
     p.userId = userId;
     p.completness = completness;
-    p.statusUpdate.status = 0;
-    p.statusUpdate.beatmapUpdate = true;
-    p.statusUpdate.statusText = (char*)calloc(2, sizeof(char));
-    p.statusUpdate.statusText[0] = ' ';
-    p.statusUpdate.beatmapMD5 = (char*)calloc(2, sizeof(char));
-    p.statusUpdate.beatmapMD5[0] = ' ';
-    p.statusUpdate.mods = 0;
+    p.statusUpdate = statusUpdate;
 
     if (completness >= CHO_STATS_STATISTICS) {
         p.rankedScore = 20000;
@@ -151,6 +145,16 @@ bool authenticateChoUser(BanchoState *bstate, char *login, char *password, Banch
     return false;
 }
 
+void setEmptyStatus(BanchoConnection *bconn) {
+    bconn->statusUpdate.status = 0;
+    bconn->statusUpdate.beatmapUpdate = true;
+    bconn->statusUpdate.statusText = (char*)calloc(2, sizeof(char));
+    bconn->statusUpdate.statusText[0] = ' ';
+    bconn->statusUpdate.beatmapMD5 = (char*)calloc(2, sizeof(char));
+    bconn->statusUpdate.beatmapMD5[0] = ' ';
+    bconn->statusUpdate.mods = 0;
+}
+
 void banchoTask(void *arg) {
     Serial.println("Hello from task");
     BanchoConnection *bconn = (BanchoConnection*)arg;
@@ -197,8 +201,11 @@ void banchoTask(void *arg) {
         sendChannelJoin(&bstate, "#osu", CHO_PACKET_CHANNEL_JOIN_SUCCESS);
         Serial.println("Sent #osu request");
 
+        // Set own status
+        setEmptyStatus(bconn);
+
         // Initial user stats send, for some reason osu! doesn't request them when using "Remember password"
-        sendUserStats(&bstate, bconn->userId, bconn->username, CHO_STATS_STATISTICS);
+        sendUserStats(&bstate, bconn->userId, bconn->username, bconn->statusUpdate, CHO_STATS_STATISTICS);
 
         while (bconn->client.connected()) {
             if (bconn->client.available()) {
@@ -209,14 +216,14 @@ void banchoTask(void *arg) {
                 switch (h.packetId) {
                 case CHO_PACKET_REQUEST_STATUS:
                     Serial.println("Received RequestStatus");
-                    sendUserStats(&bstate, bconn->userId, bconn->username, CHO_STATS_STATISTICS);
+                    sendUserStats(&bstate, bconn->userId, bconn->username, bconn->statusUpdate, CHO_STATS_STATISTICS);
                     break;
                 case CHO_PACKET_RECEIVE_UPDATES:
                     Serial.println("Client wants to receive status updates");
                     for (int i = 0; i < CHO_MAX_CONNECTIONS; i++) {
                         BanchoConnection user = connections[i];
                         if (user.active) {
-                            sendUserStats(&bstate, user.userId, user.username, CHO_STATS_FULL);
+                            sendUserStats(&bstate, user.userId, user.username, user.statusUpdate, CHO_STATS_FULL);
                         }
                     }
                     break;

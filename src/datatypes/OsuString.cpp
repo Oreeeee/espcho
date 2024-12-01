@@ -7,18 +7,13 @@ int WriteOsuString(char *in, char **out) {
     int outStringSize = 1;
     int inStringSize;
 
-    // Check if passed string is a NULL pointer
+    // String is empty
     if (in == NULL) {
         *out = (char*)calloc(1, sizeof(char));
         return outStringSize;
     }
 
     inStringSize = strlen(in);
-    
-    if (inStringSize == 0) {
-        *out = (char*)calloc(1, sizeof(char));
-        return outStringSize;
-    }
 
     // Create osu! string
     *out = (char*)calloc(inStringSize + 12, sizeof(char));
@@ -42,7 +37,7 @@ int WriteOsuString(char *in, char **out) {
 int OsuStringSize(char *in) {
     int outStringSize = 1;
 
-    if (in == NULL || strlen(in) == 0) {
+    if (in == NULL) {
         return outStringSize;
     }
 

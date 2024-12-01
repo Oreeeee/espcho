@@ -148,11 +148,11 @@ bool authenticateChoUser(BanchoState *bstate, char *login, char *password, Banch
 void setEmptyStatus(BanchoConnection *bconn) {
     bconn->statusUpdate.status = 0;
     bconn->statusUpdate.beatmapUpdate = true;
-    bconn->statusUpdate.statusText = (char*)calloc(2, sizeof(char));
-    bconn->statusUpdate.statusText[0] = ' ';
-    bconn->statusUpdate.beatmapMD5 = (char*)calloc(2, sizeof(char));
-    bconn->statusUpdate.beatmapMD5[0] = ' ';
+    bconn->statusUpdate.statusText = NULL;
+    bconn->statusUpdate.beatmapMD5 = NULL;
     bconn->statusUpdate.mods = 0;
+    bconn->statusUpdate.mode = 0;
+    bconn->statusUpdate.beatmapID = 0;
 }
 
 void banchoTask(void *arg) {
@@ -202,9 +202,11 @@ void banchoTask(void *arg) {
         Serial.println("Sent #osu request");
 
         // Set own status
+        Serial.println("Setting empty status for current user");
         setEmptyStatus(bconn);
 
         // Initial user stats send, for some reason osu! doesn't request them when using "Remember password"
+        Serial.println("Sending stats on login");
         sendUserStats(&bstate, bconn->userId, bconn->username, bconn->statusUpdate, CHO_STATS_STATISTICS);
 
         while (bconn->client.connected()) {

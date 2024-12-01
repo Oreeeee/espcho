@@ -45,7 +45,7 @@ void UserStats_Write(UserStats p, BanchoState *bstate) {
         WriteOsuString(p.username, &username);
         WriteOsuString(p.avatarFilename, &avatarFilename);
         WriteOsuString(p.city, &city);
-    } 
+    }
 
     bool writing = true;
     while (writing) {

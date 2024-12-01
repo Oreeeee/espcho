@@ -30,12 +30,12 @@ LoginPacket getConnectionInfo(WiFiClient client) {
     return lp;
 }
 
-BanchoHeader readBanchoPacket(WiFiClient client, char *buf) {
+BanchoHeader readBanchoPacket(WiFiClient client, char **buf) {
     BanchoHeader h = BanchoHeader_Read(client);
     Serial.printf("Received header: %d, %x, %d\n", h.packetId, h.compression, h.size);
-    buf = (char*)malloc(h.size); // Doing this makes it not require checking if buf != NULL before free(buf)
+    *buf = (char*)malloc(h.size); // Doing this makes it not require checking if buf != NULL before free(buf)
     if (h.size) {
-        client.readBytes(buf, h.size);
+        client.readBytes(*buf, h.size);
         Serial.printf("Received data: %s\n", buf);
     }
     return h;
@@ -211,11 +211,19 @@ void banchoTask(void *arg) {
 
         while (bconn->client.connected()) {
             if (bconn->client.available()) {
-                char *buf;
+                char *buf = NULL;
                 BanchoHeader h;
-                h = readBanchoPacket(bconn->client, buf);
+                h = readBanchoPacket(bconn->client, &buf);
 
                 switch (h.packetId) {
+                case CHO_PACKET_CHANGE_STATUS:
+                    Serial.printf("%d is changing status\n", bconn->userId);
+                    if (buf == NULL) {
+                        Serial.println("buf == NULL");
+                        break;
+                    }
+                    bconn->statusUpdate = StatusUpdate_Deserialize(buf);
+                    break;
                 case CHO_PACKET_REQUEST_STATUS:
                     Serial.println("Received RequestStatus");
                     sendUserStats(&bstate, bconn->userId, bconn->username, bconn->statusUpdate, CHO_STATS_STATISTICS);

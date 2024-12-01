@@ -12,7 +12,7 @@ int ReadOsuString(char *in, char **out) {
         return offset;
     } else if (in[0] != '\x0b') {
         // Not a valid osu! string
-        Serial.printf("WARNING: %02x is not a valid osu! string!\n", in);
+        Serial.printf("WARNING: %02x is not a valid osu! string!\n", *in);
         *out = NULL;
         return offset;
     }
@@ -21,12 +21,9 @@ int ReadOsuString(char *in, char **out) {
     int stringSize = decode_uleb128(in + offset, &uleb128BytesRead);
     offset += uleb128BytesRead;
 
-    *out = (char*)malloc(stringSize + 1);
-    strncpy(in + offset, *out, stringSize);
+    *out = (char*)calloc(stringSize + 1, sizeof(char));
+    strncpy(*out, in + offset, stringSize);
     offset += stringSize;
-
-    *out[offset + 1] = '\x00';
-    offset += 1;
 
     return offset;
 }

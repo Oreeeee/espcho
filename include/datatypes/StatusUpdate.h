@@ -15,5 +15,6 @@ typedef struct {
 
 int StatusUpdate_Size(StatusUpdate p);
 void StatusUpdate_Serialize(StatusUpdate p, char *buf);
+StatusUpdate StatusUpdate_Deserialize(char *buf);
 
 #endif

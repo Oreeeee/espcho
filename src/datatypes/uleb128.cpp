@@ -12,3 +12,20 @@ int encode_uleb128(int value, char **buffer) {
     } while (value != 0);
     return count;
 }
+
+int decode_uleb128(char *buffer, int *bytes_read) {
+    int value = 0;
+    int count = 0;
+    char byte;
+
+    do {
+        byte = buffer[count];
+        value |= (byte & 0x7F) << (7 * count);
+        count++;
+    } while (byte & 0x80);
+
+    if (bytes_read) {
+        *bytes_read = count;
+    }
+    return value;
+}

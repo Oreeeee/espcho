@@ -9,8 +9,7 @@ int StatusUpdate_Size(StatusUpdate p) {
         OsuStringSize(p.beatmapMD5) +
         sizeof(p.mods) +
         sizeof(p.mode) +
-        sizeof(p.beatmapID) +
-        OsuStringSize(p.statusText);
+        sizeof(p.beatmapID);
 }
 
 void StatusUpdate_Serialize(StatusUpdate p, char *buf) {

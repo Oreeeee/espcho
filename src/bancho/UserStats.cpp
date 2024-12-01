@@ -52,25 +52,40 @@ void UserStats_Write(UserStats p, BanchoState *bstate) {
         if (!bstate->writeLock) {
             bstate->writeLock = true;
             bstate->client.write((char*)&p.userId, sizeof(p.userId));
+            Serial.printf("UserStats: Wrote %d bytes\n", sizeof(p.userId));
             bstate->client.write((char*)&p.completness, sizeof(p.completness));
+            Serial.printf("UserStats: Wrote %d bytes\n", sizeof(p.completness));
             bstate->client.write(statusUpdate, StatusUpdate_Size(p.statusUpdate));
+            Serial.printf("UserStats: Wrote %d bytes\n", StatusUpdate_Size(p.statusUpdate));
 
             if (p.completness >= CHO_STATS_STATISTICS) {
                 bstate->client.write((char*)&p.rankedScore, sizeof(p.rankedScore));
+                Serial.printf("UserStats: Wrote %d bytes\n", sizeof(p.rankedScore));
                 bstate->client.write((char*)&p.accuracy, sizeof(p.accuracy));
+                Serial.printf("UserStats: Wrote %d bytes\n", sizeof(p.accuracy));
                 bstate->client.write((char*)&p.playcount, sizeof(p.playcount));
+                Serial.printf("UserStats: Wrote %d bytes\n", sizeof(p.playcount));
                 bstate->client.write((char*)&p.totalScore, sizeof(p.totalScore));
+                Serial.printf("UserStats: Wrote %d bytes\n", sizeof(p.totalScore));
                 bstate->client.write((char*)&p.rank, sizeof(p.rank));
+                Serial.printf("UserStats: Wrote %d bytes\n", sizeof(p.rank));
             }
 
             if (p.completness == CHO_STATS_FULL) {
                 bstate->client.write(username, strlen(username));
+                Serial.printf("UserStats: Wrote %d bytes\n", strlen(username));
                 bstate->client.write(avatarFilename, strlen(avatarFilename));
+                Serial.printf("UserStats: Wrote %d bytes\n", strlen(avatarFilename));
                 bstate->client.write((char*)&p.timezone, sizeof(p.timezone));
+                Serial.printf("UserStats: Wrote %d bytes\n", sizeof(p.timezone));
                 bstate->client.write(city, strlen(city));
+                Serial.printf("UserStats: Wrote %d bytes\n", strlen(city));
                 bstate->client.write((char*)&p.permissions, sizeof(p.permissions));
+                Serial.printf("UserStats: Wrote %d bytes\n", sizeof(p.permissions));
                 bstate->client.write((char*)&p.longitude, sizeof(p.longitude));
+                Serial.printf("UserStats: Wrote %d bytes\n", sizeof(p.longitude));
                 bstate->client.write((char*)&p.latitude, sizeof(p.latitude));
+                Serial.printf("UserStats: Wrote %d bytes\n", sizeof(p.latitude));
             }
 
             bstate->client.flush();

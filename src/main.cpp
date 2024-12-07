@@ -10,13 +10,16 @@
 #include "Pinger.h"
 #include "Globals.h"
 #include "ThreadingUtils.h"
+#include "HttpServer.h"
 
 #ifdef CHO_DISABLE_BROWNOUT
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
 #endif
+#include <WebServer.h>
 
 WiFiServer server(CHO_PORT);
+
 
 void setup() {
   #ifdef CHO_DISABLE_BROWNOUT
@@ -40,6 +43,8 @@ void setup() {
   Serial.printf("Starting TCP server on port %d\n", CHO_PORT);
   server.begin();
   Serial.println("Listening...");
+
+  initHttpServer();
 }
 
 void loop() {
@@ -74,4 +79,5 @@ void loop() {
     );
     Serial.println("Started Bancho task");
   }
+  httpServer.handleClient();
 }

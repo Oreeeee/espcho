@@ -26,7 +26,7 @@ void setup() {
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
   #endif
 
-  Serial.begin(9600);
+  Serial.begin(115200);
   Serial.println("espcho says hello!");
 
   Serial.print("Connecting to WiFi ");

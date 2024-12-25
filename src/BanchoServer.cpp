@@ -13,19 +13,55 @@
 #include "Globals.h"
 #include "Pinger.h"
 
-LoginPacket getConnectionInfo(WiFiClient client) {
+LoginPacket getConnectionInfo(int clientSock) {
     LoginPacket lp;
 
-    lp.username = (char*)calloc(CHO_MAX_LOGIN_STR, sizeof(char));
-    lp.password = (char*)calloc(CHO_MAX_LOGIN_STR, sizeof(char));
-    lp.clientInfo = (char*)calloc(CHO_MAX_LOGIN_STR, sizeof(char));
+    char recv_buffer[128];
+    int i = 0;
+    int linesReceived = 0;
 
-    client.readBytesUntil('\r', lp.username, CHO_MAX_LOGIN_STR);
-    client.read(); // \n
-    client.readBytesUntil('\r', lp.password, CHO_MAX_LOGIN_STR);
-    client.read(); // \n
-    client.readBytesUntil('\r', lp.clientInfo, CHO_MAX_LOGIN_STR);
-    client.read(); // \n
+    while (linesReceived < 3) {
+        int len = recv(clientSock, recv_buffer + i, 1, 0); // Read 1 byte
+        if (len < 0) {
+            Serial.println("Error reading from client");
+            break;
+        }
+        if (len == 0) {
+            break;
+        }
+
+        // Check if we've received a full line
+        if (recv_buffer[i] == '\n' && i > 0 && recv_buffer[i - 1] == '\r') {
+            // Null-terminate the string
+            recv_buffer[i - 1] = '\0';
+            recv_buffer[i] = '\0';
+
+            switch (linesReceived) {
+                case 0:
+                    lp.username = (char*)calloc(strlen(recv_buffer), sizeof(char));
+                    strncpy(lp.username, recv_buffer, strlen(recv_buffer));
+                    break;
+                case 1:
+                    lp.password = (char*)calloc(strlen(recv_buffer), sizeof(char));
+                    strncpy(lp.password, recv_buffer, strlen(recv_buffer));
+                    break;
+                case 2:
+                    lp.clientInfo = (char*)calloc(strlen(recv_buffer), sizeof(char));
+                    strncpy(lp.clientInfo, recv_buffer, strlen(recv_buffer));
+                    break;
+            }
+
+            // Empty the recv buffer
+            for (int x = 0; x < 128; i++)
+                recv_buffer[x] = '\0';
+
+            // Reset the character count
+            i = -1;
+
+            linesReceived++;
+        }
+        i++;
+    }
     
     return lp;
 }
@@ -160,106 +196,106 @@ void banchoTask(void *arg) {
     BanchoConnection *bconn = (BanchoConnection*)arg;
     Serial.println("Got variables");
 
-    if (bconn->client) {
-        Serial.println("Trying to get connection info...");
-        LoginPacket lp = getConnectionInfo(bconn->client);
-        Serial.printf("Username: %s\nPassword: %s\nClient info: %s\n", lp.username, lp.password, lp.clientInfo);
+    Serial.println("Trying to get connection info...");
+    LoginPacket lp = getConnectionInfo(bconn->client);
+    Serial.printf("Username: %s\nPassword: %s\nClient info: %s\n", lp.username, lp.password, lp.clientInfo);
 
-        BanchoState bstate;
-        bstate.client = bconn->client;
-        bstate.writeLock = false;
-        bstate.alive = true;
+    vTaskDelete(NULL);
 
-        Serial.println("Verifying login");
-        if (!authenticateChoUser(&bstate, lp.username, lp.password, bconn)) {
-            Serial.println("Authentication failed! Server dropping conenction");
-            bstate.alive = false;
-            bconn->client.stop();
-            bconn->active = false;
-            free(bconn);
+    BanchoState bstate;
+    bstate.client = bconn->client;
+    bstate.writeLock = false;
+    bstate.alive = true;
 
-            vTaskDelete(NULL);
-        }
-        Serial.println("Authentication successful!");
-        bconn->username = (char*)malloc(strlen(lp.username) + 1);
-        strncpy(bconn->username, lp.username, strlen(lp.username) + 1);
-
-        // Create pinger task
-        TaskHandle_t pingerTask;
-        xTaskCreate(
-            PingClient,
-            "Pinger",
-            1536,
-            &bstate,
-            1,
-            &pingerTask
-        );
-
-        // Make client join #osu
-        Serial.println("Sending join #osu to client");
-        sendChannelJoin(&bstate, "#osu", CHO_PACKET_CHANNEL_AVAILABLE_AUTOJOIN);
-        sendChannelJoin(&bstate, "#osu", CHO_PACKET_CHANNEL_JOIN_SUCCESS);
-        Serial.println("Sent #osu request");
-
-        // Set own status
-        Serial.println("Setting empty status for current user");
-        setEmptyStatus(bconn);
-
-        // Initial user stats send, for some reason osu! doesn't request them when using "Remember password"
-        Serial.println("Sending stats on login");
-        sendUserStats(&bstate, bconn->userId, bconn->username, bconn->statusUpdate, CHO_STATS_STATISTICS);
-
-        while (bconn->client.connected()) {
-            if (bconn->client.available()) {
-                char *buf = NULL;
-                BanchoHeader h;
-                h = readBanchoPacket(bconn->client, &buf);
-
-                switch (h.packetId) {
-                case CHO_PACKET_CHANGE_STATUS:
-                    Serial.printf("%d is changing status\n", bconn->userId);
-                    if (buf == NULL) {
-                        Serial.println("buf == NULL");
-                        break;
-                    }
-                    bconn->statusUpdate = StatusUpdate_Deserialize(buf);
-                    break;
-                case CHO_PACKET_REQUEST_STATUS:
-                    Serial.println("Received RequestStatus");
-                    sendUserStats(&bstate, bconn->userId, bconn->username, bconn->statusUpdate, CHO_STATS_STATISTICS);
-                    break;
-                case CHO_PACKET_RECEIVE_UPDATES:
-                    Serial.println("Client wants to receive status updates");
-                    for (int i = 0; i < CHO_MAX_CONNECTIONS; i++) {
-                        BanchoConnection user = connections[i];
-                        if (user.active) {
-                            sendUserStats(&bstate, user.userId, user.username, user.statusUpdate, CHO_STATS_FULL);
-                        }
-                    }
-                    break;
-                case CHO_PACKET_PONG:
-                    break;
-                default:
-                    Serial.printf("Unknown packet received: %d\n", h.packetId);
-                }
-
-                //if (buf != NULL)
-                free(buf);
-            }
-        }
-
-        Serial.println("Dropping connection!");
+    Serial.println("Verifying login");
+    if (!authenticateChoUser(&bstate, lp.username, lp.password, bconn)) {
+        Serial.println("Authentication failed! Server dropping conenction");
         bstate.alive = false;
-        Serial.println("Stopping client");
         bconn->client.stop();
-        Serial.println("Marking connection as free");
         bconn->active = false;
-        Serial.println("Freeing username");
-        free(bconn->username);
-        // Serial.println("Freeing bconn");
-        // free(bconn);
+        free(bconn);
 
-        Serial.println("Exitting task");
         vTaskDelete(NULL);
     }
+    Serial.println("Authentication successful!");
+    bconn->username = (char*)malloc(strlen(lp.username) + 1);
+    strncpy(bconn->username, lp.username, strlen(lp.username) + 1);
+
+    // Create pinger task
+    TaskHandle_t pingerTask;
+    xTaskCreate(
+        PingClient,
+        "Pinger",
+        1536,
+        &bstate,
+        1,
+        &pingerTask
+    );
+
+    // Make client join #osu
+    Serial.println("Sending join #osu to client");
+    sendChannelJoin(&bstate, "#osu", CHO_PACKET_CHANNEL_AVAILABLE_AUTOJOIN);
+    sendChannelJoin(&bstate, "#osu", CHO_PACKET_CHANNEL_JOIN_SUCCESS);
+    Serial.println("Sent #osu request");
+
+    // Set own status
+    Serial.println("Setting empty status for current user");
+    setEmptyStatus(bconn);
+
+    // Initial user stats send, for some reason osu! doesn't request them when using "Remember password"
+    Serial.println("Sending stats on login");
+    sendUserStats(&bstate, bconn->userId, bconn->username, bconn->statusUpdate, CHO_STATS_STATISTICS);
+
+    while (bconn->client.connected()) {
+        if (bconn->client.available()) {
+            char *buf = NULL;
+            BanchoHeader h;
+            h = readBanchoPacket(bconn->client, &buf);
+
+            switch (h.packetId) {
+            case CHO_PACKET_CHANGE_STATUS:
+                Serial.printf("%d is changing status\n", bconn->userId);
+                if (buf == NULL) {
+                    Serial.println("buf == NULL");
+                    break;
+                }
+                bconn->statusUpdate = StatusUpdate_Deserialize(buf);
+                break;
+            case CHO_PACKET_REQUEST_STATUS:
+                Serial.println("Received RequestStatus");
+                sendUserStats(&bstate, bconn->userId, bconn->username, bconn->statusUpdate, CHO_STATS_STATISTICS);
+                break;
+            case CHO_PACKET_RECEIVE_UPDATES:
+                Serial.println("Client wants to receive status updates");
+                for (int i = 0; i < CHO_MAX_CONNECTIONS; i++) {
+                    BanchoConnection user = connections[i];
+                    if (user.active) {
+                        sendUserStats(&bstate, user.userId, user.username, user.statusUpdate, CHO_STATS_FULL);
+                    }
+                }
+                break;
+            case CHO_PACKET_PONG:
+                break;
+            default:
+                Serial.printf("Unknown packet received: %d\n", h.packetId);
+            }
+
+            //if (buf != NULL)
+            free(buf);
+        }
+    }
+
+    Serial.println("Dropping connection!");
+    bstate.alive = false;
+    Serial.println("Stopping client");
+    bconn->client.stop();
+    Serial.println("Marking connection as free");
+    bconn->active = false;
+    Serial.println("Freeing username");
+    free(bconn->username);
+    // Serial.println("Freeing bconn");
+    // free(bconn);
+
+    Serial.println("Exitting task");
+    vTaskDelete(NULL);
 }

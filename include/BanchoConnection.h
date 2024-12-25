@@ -8,6 +8,7 @@
 
 typedef struct {
     WiFiClient client;
+    int clientSock;
     TaskHandle_t task;
     int index;
     bool active;

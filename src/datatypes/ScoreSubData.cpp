@@ -6,13 +6,6 @@ ScoreSubData parseScoreString(char *in) {
     ScoreSubData s;
 
     // Buffers for strings
-    // char fileChecksumTmp[17];
-    // char usernameTmp[64];
-    // char onlineScoreChecksumTmp[33];
-    // char fcTmp[6];
-    // char rankingTmp[3];
-    // char passTmp[6];
-
     char fileChecksumTmp[64];
     char usernameTmp[64];
     char onlineScoreChecksumTmp[64];
@@ -20,34 +13,66 @@ ScoreSubData parseScoreString(char *in) {
     char rankingTmp[64];
     char passTmp[64];
 
-    // Parse the string, copy ints to their locations and string to temporary buffers
-    Serial.println("sscanf()");
-    sscanf(
-        in,
-        "%63[^:]:%63[^:]:%63[^:]:%d:%d:%d:%d:%d:%d:%d:%63[^:]:%63[^:]:%d:%63[^:]:%d:%d:%d",
-        //"%s:%s:%s:%d:%d:%d:%d:%d:%d:%d:%d:%s:%s:%d:%s:%d:%d:%d",
-        &fileChecksumTmp,
-        &usernameTmp,
-        &onlineScoreChecksumTmp,
-        &s.hit300,
-        &s.hit100,
-        &s.hit50,
-        &s.hitGeki,
-        &s.hitKatu,
-        &s.hitMiss,
-        &s.totalScore,
-        &s.maxCombo,
-        &fcTmp,
-        &rankingTmp,
-        &s.mods,
-        &passTmp,
-        &s.playMode,
-        &s.date,
-        &s.version
-    );
+    char inputCopy[512];
+    strncpy(inputCopy, in, sizeof(inputCopy));
+
+    char *saveptr = NULL;
+    char *token = strtok_r(inputCopy, ":", &saveptr);
+    if (token) strncpy(fileChecksumTmp, token, sizeof(fileChecksumTmp));
+
+    token = strtok_r(NULL, ":", &saveptr);
+    if (token) strncpy(usernameTmp, token, sizeof(usernameTmp));
+
+    token = strtok_r(NULL, ":", &saveptr);
+    if (token) strncpy(onlineScoreChecksumTmp, token, sizeof(onlineScoreChecksumTmp));
+
+    token = strtok_r(NULL, ":", &saveptr);
+    if (token) s.hit300 = atoi(token);
+
+    token = strtok_r(NULL, ":", &saveptr);
+    if (token) s.hit100 = atoi(token);
+
+    token = strtok_r(NULL, ":", &saveptr);
+    if (token) s.hit50 = atoi(token);
+
+    token = strtok_r(NULL, ":", &saveptr);
+    if (token) s.hitGeki = atoi(token);
+
+    token = strtok_r(NULL, ":", &saveptr);
+    if (token) s.hitKatu = atoi(token);
+
+    token = strtok_r(NULL, ":", &saveptr);
+    if (token) s.hitMiss = atoi(token);
+
+    token = strtok_r(NULL, ":", &saveptr);
+    if (token) s.totalScore = atoi(token);
+
+    token = strtok_r(NULL, ":", &saveptr);
+    if (token) s.maxCombo = atoi(token);
+
+    token = strtok_r(NULL, ":", &saveptr);
+    if (token) strncpy(fcTmp, token, sizeof(fcTmp));
+
+    token = strtok_r(NULL, ":", &saveptr);
+    if (token) strncpy(rankingTmp, token, sizeof(rankingTmp));
+
+    token = strtok_r(NULL, ":", &saveptr);
+    if (token) s.mods = atoi(token);
+
+    token = strtok_r(NULL, ":", &saveptr);
+    if (token) strncpy(passTmp, token, sizeof(passTmp));
+
+    token = strtok_r(NULL, ":", &saveptr);
+    if (token) s.playMode = atoi(token);
+
+    token = strtok_r(NULL, ":", &saveptr);
+    if (token) s.date = atoi(token);
+
+    token = strtok_r(NULL, ":", &saveptr);
+    if (token) s.version = atoi(token);
 
     // Copy temporary strings to the struct
-    Serial.println("Copy temporary strings to the struct");
+    //Serial.println("Copy temporary strings to the struct");
     s.fileChecksum = (char*)calloc(strlen(fileChecksumTmp) + 1, sizeof(char));
     strncpy(s.fileChecksum, fileChecksumTmp, strlen(fileChecksumTmp));
 
@@ -61,9 +86,17 @@ ScoreSubData parseScoreString(char *in) {
     strncpy(s.ranking, rankingTmp, strlen(rankingTmp));
 
     // Parse string booleans
-    Serial.println("Parse string booleans");
+    //Serial.println("Parse string booleans");
     s.fc = StringBoolRead(fcTmp);
     s.pass = StringBoolRead(passTmp);
 
     return s;
+}
+
+// Free all the strings in ScoreSubData
+void freeScoreSubData(ScoreSubData s) {
+    free(s.fileChecksum);
+    free(s.username);
+    free(s.onlineScoreChecksum);
+    free(s.ranking);
 }

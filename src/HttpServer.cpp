@@ -25,7 +25,7 @@ esp_err_t scoreSubHandler(httpd_req_t *req) {
     if (httpd_query_key_value(query, "pass", value, sizeof(value)) == ESP_OK) {
         Serial.printf("[HTTP] Got pass: %s\n", value);
     } else {
-        Serial.println("[HTTP] No pass data!");
+        Serial.println("[HTTP] No pass data");
         httpd_resp_send(req, "error: pass", HTTPD_RESP_USE_STRLEN);
         return ESP_OK;
     }
@@ -38,15 +38,14 @@ esp_err_t scoreSubHandler(httpd_req_t *req) {
         Serial.println("Parsing score...");
         ScoreSubData s = parseScoreString(value);
         Serial.printf("Score submitted by %s\n", s.username);
+        freeScoreSubData(s);
     } else {
-        Serial.println("[HTTP] No score data!?!?!??!??!!!");
+        Serial.println("[HTTP] No score data");
         httpd_resp_send(req, "error: ban", HTTPD_RESP_USE_STRLEN);
         return ESP_OK;
     }
 
-
-    const char resp[] = "error: ban";
-    httpd_resp_send(req, resp, HTTPD_RESP_USE_STRLEN);
+    httpd_resp_send(req, NULL, HTTPD_RESP_USE_STRLEN);
     return ESP_OK;
 }
 

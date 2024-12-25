@@ -1,9 +1,19 @@
 #include "HttpServer.h"
-#include <WebServer.h>
+//#include <WebServer.h>
 #include "datatypes/ScoreSubData.h"
+#include <esp_http_server.h>
+#include <Arduino.h>
 
-WebServer httpServer(80);
+//WebServer httpServer(80);
 
+httpd_uri_t uri_score_sub = {
+    .uri = "/web/osu-submit-modular.php",
+    .method = HTTP_POST,
+    .handler = scoreSubHandler,
+    .user_ctx = NULL
+};
+
+/*
 void handleScoreSub() {
     char *scoreData = NULL;
     char *passData = NULL;
@@ -71,7 +81,37 @@ void handleScoreSub() {
 void handle404() {
     httpServer.send(404, "text/plain", "Not found");
 }
+*/
 
+esp_err_t scoreSubHandler(httpd_req_t *req) {
+    Serial.println("[HTTP] POST /web/osu-submit-modular.php");
+    
+    const char resp[] = "error: ban";
+    httpd_resp_send(req, resp, HTTPD_RESP_USE_STRLEN);
+    return ESP_OK;
+}
+
+httpd_handle_t initHttpServer_c() {
+    Serial.println("Starting HTTP server on port 80...");
+
+    httpd_config_t config = HTTPD_DEFAULT_CONFIG();
+    httpServerC = NULL;
+
+    if (httpd_start(&httpServerC, &config) == ESP_OK) {
+        httpd_register_uri_handler(httpServerC, &uri_score_sub);
+    }
+
+    Serial.println("HTTP Server started on port 80");
+    return httpServerC;
+}
+
+void stopHttpServer(httpd_handle_t server) {
+    if (server) {
+        httpd_stop(server);
+    }
+}
+
+/*
 void initHttpServer() {
     Serial.println("Starting HTTP server on port 80...");
     httpServer.on("/web/osu-submit-modular.php", handleScoreSub);
@@ -79,3 +119,4 @@ void initHttpServer() {
     httpServer.begin();
     Serial.println("HTTP Server started on port 80");
 }
+*/

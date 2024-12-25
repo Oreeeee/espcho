@@ -44,7 +44,7 @@ void setup() {
   server.begin();
   Serial.println("Listening...");
 
-  initHttpServer();
+  httpServerC = initHttpServer_c();
 }
 
 void loop() {
@@ -79,5 +79,5 @@ void loop() {
     );
     Serial.println("Started Bancho task");
   }
-  httpServer.handleClient();
+  //httpServer.handleClient();
 }

@@ -1,8 +1,15 @@
 # espcho
-Experimental osu! 2010 (b1596) server, running on ESP32
+Experimental osu! server for 2010 clients, running on ESP32. It's designed for the b1596 version of the game, but additionally other versions between b1183 and b1719 are working.
 
 ## Status
 This server is very experimental, it will probably never be production ready (why would you run a production server on a microcontroller anyways?)
+
+## Hiatus
+I haven't been working on this project for some time due to being unable to get the SD card module to work with the ESP32. However when I fix this issue, I will return to this.
+
+## Screenshots
+![b1183 and b1719 clients on the main menu](screenshots/screenshot1.png)
+![b1183 and b1719 clients with the extended chat menu open](screenshots/screenshot2.png)
 
 ## Code style
 Please avoid C++ style code as much as possible and stick to C. When you have to use C++, don't use modern features.

@@ -9,7 +9,7 @@
 
 BanchoHeader readBanchoPacket(WiFiClient client, char *buf);
 LoginPacket getConnectionInfo(WiFiClient client);
-void sendUserStats(BanchoState *bstate, uint8_t completness);
+void sendUserStats(BanchoState *bstate, uint8_t completness, uint16_t version);
 void sendChannelJoin(BanchoState *bstate, char *channelName, int packetType);
 void sendEmptyPacket(BanchoState *bstate, int packetType);
 bool authenticateChoUser(BanchoState *bstate, char *login, char *password, BanchoConnection *bconn);

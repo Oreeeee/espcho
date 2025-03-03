@@ -32,7 +32,7 @@ LoginPacket getConnectionInfo(WiFiClient client) {
 
 int getClientVersion(LoginPacket lp) {
     int version;
-    if (!sscanf(lp.clientInfo, "b%d", &version) == 1) {
+    if (sscanf(lp.clientInfo, "b%d", &version) != 1) {
         Serial.println("Failed to get client's version! Assuming b1596");
         return 1596;
     }
@@ -51,7 +51,7 @@ BanchoHeader readBanchoPacket(WiFiClient client, char **buf) {
     return h;
 }
 
-void sendUserStats(BanchoState *bstate, uint32_t userId, char *username, StatusUpdate statusUpdate, uint8_t completness) {
+void sendUserStats(BanchoState *bstate, uint32_t userId, char *username, StatusUpdate statusUpdate, uint8_t completness, uint16_t version) {
     UserStats p;
     p.userId = userId;
     p.completness = completness;
@@ -76,11 +76,10 @@ void sendUserStats(BanchoState *bstate, uint32_t userId, char *username, StatusU
     BanchoHeader h;
     h.packetId = CHO_PACKET_USER_STATS;
     h.compression = false;
-    h.size = UserStats_Size(p);
-    //h.size = 11; // TODO : Calculate this automatically, dynamic calculations cause crashes
+    h.size = UserStats_Size(p, version);
 
     BanchoHeader_Write(h, bstate);
-    UserStats_Write(p, bstate);
+    UserStats_Write(p, bstate, version);
 }
 
 void sendChannelJoin(BanchoState *bstate, char *channelName, int packetType) {
@@ -218,7 +217,7 @@ void banchoTask(void *arg) {
 
         // Initial user stats send, for some reason osu! doesn't request them when using "Remember password"
         Serial.println("Sending stats on login");
-        sendUserStats(&bstate, bconn->userId, bconn->username, bconn->statusUpdate, CHO_STATS_STATISTICS);
+        sendUserStats(&bstate, bconn->userId, bconn->username, bconn->statusUpdate, CHO_STATS_STATISTICS, bconn->version);
 
         while (bconn->client.connected()) {
             if (bconn->client.available()) {
@@ -237,14 +236,14 @@ void banchoTask(void *arg) {
                     break;
                 case CHO_PACKET_REQUEST_STATUS:
                     Serial.println("Received RequestStatus");
-                    sendUserStats(&bstate, bconn->userId, bconn->username, bconn->statusUpdate, CHO_STATS_STATISTICS);
+                    sendUserStats(&bstate, bconn->userId, bconn->username, bconn->statusUpdate, CHO_STATS_STATISTICS, bconn->version);
                     break;
                 case CHO_PACKET_RECEIVE_UPDATES:
                     Serial.println("Client wants to receive status updates");
                     for (int i = 0; i < CHO_MAX_CONNECTIONS; i++) {
                         BanchoConnection user = connections[i];
                         if (user.active) {
-                            sendUserStats(&bstate, user.userId, user.username, user.statusUpdate, CHO_STATS_FULL);
+                            sendUserStats(&bstate, user.userId, user.username, user.statusUpdate, CHO_STATS_FULL, bconn->version);
                         }
                     }
                     break;

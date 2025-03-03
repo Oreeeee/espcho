@@ -5,7 +5,7 @@
 #include "datatypes/StatusUpdate.h"
 #include <WiFi.h>
 
-uint32_t UserStats_Size(UserStats p) {
+uint32_t UserStats_Size(UserStats p, uint16_t version) {
     int packetSize = sizeof(p.userId) +
         sizeof(p.completness) +
         StatusUpdate_Size(p.statusUpdate);
@@ -25,15 +25,18 @@ uint32_t UserStats_Size(UserStats p) {
 
     if (p.completness == CHO_STATS_FULL) {
         packetSize += sizeof(p.timezone) +
-            sizeof(p.permissions) +
-            sizeof(p.longitude) +
-            sizeof(p.longitude);
+            sizeof(p.permissions);
+        
+        if (version >= 1183) { // Clients before b1183 don't send long and lat
+            packetSize += sizeof(p.longitude) +
+                        sizeof(p.longitude);
+        }
     }
 
     return packetSize;
 }
 
-void UserStats_Write(UserStats p, BanchoState *bstate) {
+void UserStats_Write(UserStats p, BanchoState *bstate, uint16_t version) {
     char *statusUpdate = (char*)malloc(StatusUpdate_Size(p.statusUpdate));
     char *username;
     char *avatarFilename;
@@ -82,10 +85,13 @@ void UserStats_Write(UserStats p, BanchoState *bstate) {
                 Serial.printf("UserStats: Wrote %d bytes\n", strlen(city));
                 bstate->client.write((char*)&p.permissions, sizeof(p.permissions));
                 Serial.printf("UserStats: Wrote %d bytes\n", sizeof(p.permissions));
-                bstate->client.write((char*)&p.longitude, sizeof(p.longitude));
-                Serial.printf("UserStats: Wrote %d bytes\n", sizeof(p.longitude));
-                bstate->client.write((char*)&p.latitude, sizeof(p.latitude));
-                Serial.printf("UserStats: Wrote %d bytes\n", sizeof(p.latitude));
+
+                if (version >= 1183) { // Clients before b1183 don't send long and lat
+                    bstate->client.write((char*)&p.longitude, sizeof(p.longitude));
+                    Serial.printf("UserStats: Wrote %d bytes\n", sizeof(p.longitude));
+                    bstate->client.write((char*)&p.latitude, sizeof(p.latitude));
+                    Serial.printf("UserStats: Wrote %d bytes\n", sizeof(p.latitude));
+                }
             }
 
             bstate->client.flush();

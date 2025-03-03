@@ -14,6 +14,7 @@ typedef struct {
     char *username;
     uint32_t userId;
     StatusUpdate statusUpdate;
+    uint16_t version; // uint16_t is enough for pre-2012 clients
 } BanchoConnection;
 
 #endif

@@ -30,6 +30,16 @@ LoginPacket getConnectionInfo(WiFiClient client) {
     return lp;
 }
 
+int getClientVersion(LoginPacket lp) {
+    int version;
+    if (!sscanf(lp.clientInfo, "b%d", &version) == 1) {
+        Serial.println("Failed to get client's version! Assuming b1596");
+        return 1596;
+    }
+    Serial.printf("Got client's version: b%d\n", version);
+    return version;
+}
+
 BanchoHeader readBanchoPacket(WiFiClient client, char **buf) {
     BanchoHeader h = BanchoHeader_Read(client);
     Serial.printf("Received header: %d, %x, %d\n", h.packetId, h.compression, h.size);
@@ -181,6 +191,7 @@ void banchoTask(void *arg) {
             vTaskDelete(NULL);
         }
         Serial.println("Authentication successful!");
+        bconn->version = getClientVersion(lp);
         bconn->username = (char*)malloc(strlen(lp.username) + 1);
         strncpy(bconn->username, lp.username, strlen(lp.username) + 1);
 

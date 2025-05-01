@@ -2,6 +2,7 @@
 #define STATUSUPDATE_H
 
 #include <stdint.h>
+#include "serialization/Buffer.h"
 
 typedef struct {
     uint8_t status;
@@ -14,7 +15,7 @@ typedef struct {
 } StatusUpdate;
 
 int StatusUpdate_Size(StatusUpdate p);
-void StatusUpdate_Serialize(StatusUpdate p, char *buf);
+void StatusUpdate_Serialize(const StatusUpdate &p, Buffer* buf);
 StatusUpdate StatusUpdate_Deserialize(char *buf);
 
 #endif

@@ -1,6 +1,8 @@
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 
+#define BUFFER_SIZE 1024 /* Default size of buffer data */
+
 #define CHO_MAX_LOGIN_STR 36 /* Max size for C2S login packet */
 
 #define LOGIN_WRONG_PASS -1

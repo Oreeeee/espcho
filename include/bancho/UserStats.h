@@ -35,6 +35,6 @@ typedef struct {
 } UserStats;
 
 uint32_t UserStats_Size(UserStats p, uint16_t version);
-void UserStats_Write(UserStats p, BanchoState *bstate, uint16_t version);
+void UserStats_Write(const UserStats &p, BanchoState *bstate, Buffer* buf, const uint16_t version);
 
 #endif

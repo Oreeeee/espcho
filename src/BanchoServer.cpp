@@ -12,6 +12,7 @@
 #include "ThreadingUtils.h"
 #include "Globals.h"
 #include "Pinger.h"
+#include "serialization/Buffer.h"
 
 LoginPacket getConnectionInfo(WiFiClient client) {
     LoginPacket lp;
@@ -51,6 +52,36 @@ BanchoHeader readBanchoPacket(WiFiClient client, char **buf) {
     return h;
 }
 
+void SendBanchoPacket(BanchoState* bstate, int packetId, Buffer* buf) {
+    bool writing = true;
+    bool compression = false;
+    uint32_t size = 0;
+    while (writing) {
+        if (!bstate->writeLock) {
+            bstate->writeLock = true;
+            Serial.println("bstate->client.write((char*)&packetId, sizeof(packetId));");
+            bstate->client.write((char*)&packetId, sizeof(packetId));
+            Serial.println("bstate->client.write((char*)&compression, sizeof(compression));");
+            bstate->client.write((char*)&compression, sizeof(compression));
+            if (buf == NULL) {
+                Serial.println("bstate->client.write((char*)&size, sizeof(size));");
+                bstate->client.write((char*)&size, sizeof(size));
+            } else {
+                Serial.println("buf->pos");
+                size = buf->pos;
+                Serial.println("bstate->client.write((char*)size, sizeof(size));");
+                bstate->client.write((char*)size, sizeof(size));
+                Serial.println("bstate->client.write((char*)buf->data, size);");
+                bstate->client.write(buf->data, size-1);
+            }
+            Serial.println("bstate->client.flush();");
+            bstate->client.flush();
+            bstate->writeLock = false;
+            writing = false;
+        }
+    }
+}
+
 void sendUserStats(BanchoState *bstate, uint32_t userId, char *username, StatusUpdate statusUpdate, uint8_t completness, uint16_t version) {
     UserStats p;
     p.userId = userId;
@@ -73,13 +104,15 @@ void sendUserStats(BanchoState *bstate, uint32_t userId, char *username, StatusU
         p.city = "peppy's hidden bunker";
     }
 
-    BanchoHeader h;
-    h.packetId = CHO_PACKET_USER_STATS;
-    h.compression = false;
-    h.size = UserStats_Size(p, version);
+    Serial.println("Buffer buf;");
+    Buffer buf;
+    Serial.println("CreateBuffer(&buf);");
+    CreateBuffer(&buf);
 
-    BanchoHeader_Write(h, bstate);
-    UserStats_Write(p, bstate, version);
+    Serial.println("UserStats_Write(p, bstate, &buf, version);");
+    UserStats_Write(p, bstate, &buf, version);
+    Serial.println("SendBanchoPacket(bstate, CHO_PACKET_USER_STATS, &buf);");
+    SendBanchoPacket(bstate, CHO_PACKET_USER_STATS, &buf);
 }
 
 void sendChannelJoin(BanchoState *bstate, char *channelName, int packetType) {

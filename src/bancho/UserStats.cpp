@@ -5,6 +5,9 @@
 #include "datatypes/StatusUpdate.h"
 #include <WiFi.h>
 
+#include "serialization/Buffer.h"
+#include "serialization/Writers.h"
+
 uint32_t UserStats_Size(UserStats p, uint16_t version) {
     int packetSize = sizeof(p.userId) +
         sizeof(p.completness) +
@@ -36,74 +39,29 @@ uint32_t UserStats_Size(UserStats p, uint16_t version) {
     return packetSize;
 }
 
-void UserStats_Write(UserStats p, BanchoState *bstate, uint16_t version) {
-    char *statusUpdate = (char*)malloc(StatusUpdate_Size(p.statusUpdate));
-    char *username;
-    char *avatarFilename;
-    char *city;
+void UserStats_Write(const UserStats &p, BanchoState *bstate, Buffer* buf, const uint16_t version) {
+    BufferWriteS32(buf, p.userId);
+    BufferWriteU8(buf, p.completness);
+    //StatusUpdate_Serialize(p.statusUpdate, buf);
 
-    StatusUpdate_Serialize(p.statusUpdate, statusUpdate);
-
-    if (p.completness == CHO_STATS_FULL) {
-        WriteOsuString(p.username, &username);
-        WriteOsuString(p.avatarFilename, &avatarFilename);
-        WriteOsuString(p.city, &city);
+    if (p.completness >= CHO_STATS_STATISTICS) {
+        BufferWriteU64(buf, p.rankedScore);
+        BufferWriteFloat(buf, p.accuracy);
+        BufferWriteS32(buf, p.playcount);
+        BufferWriteS64(buf, p.totalScore);
+        BufferWriteS32(buf, p.rank);
     }
 
-    bool writing = true;
-    while (writing) {
-        if (!bstate->writeLock) {
-            bstate->writeLock = true;
-            bstate->client.write((char*)&p.userId, sizeof(p.userId));
-            Serial.printf("UserStats: Wrote %d bytes\n", sizeof(p.userId));
-            bstate->client.write((char*)&p.completness, sizeof(p.completness));
-            Serial.printf("UserStats: Wrote %d bytes\n", sizeof(p.completness));
-            bstate->client.write(statusUpdate, StatusUpdate_Size(p.statusUpdate));
-            Serial.printf("UserStats: Wrote %d bytes\n", StatusUpdate_Size(p.statusUpdate));
+    if (p.completness == CHO_STATS_FULL) {
+        //BufferWriteOsuString(buf, p.username);
+        //BufferWriteOsuString(buf, p.avatarFilename);
+        BufferWriteU8(buf, p.timezone);
+        //BufferWriteOsuString(buf, p.city);
+        BufferWriteU8(buf, p.permissions);
 
-            if (p.completness >= CHO_STATS_STATISTICS) {
-                bstate->client.write((char*)&p.rankedScore, sizeof(p.rankedScore));
-                Serial.printf("UserStats: Wrote %d bytes\n", sizeof(p.rankedScore));
-                bstate->client.write((char*)&p.accuracy, sizeof(p.accuracy));
-                Serial.printf("UserStats: Wrote %d bytes\n", sizeof(p.accuracy));
-                bstate->client.write((char*)&p.playcount, sizeof(p.playcount));
-                Serial.printf("UserStats: Wrote %d bytes\n", sizeof(p.playcount));
-                bstate->client.write((char*)&p.totalScore, sizeof(p.totalScore));
-                Serial.printf("UserStats: Wrote %d bytes\n", sizeof(p.totalScore));
-                bstate->client.write((char*)&p.rank, sizeof(p.rank));
-                Serial.printf("UserStats: Wrote %d bytes\n", sizeof(p.rank));
-            }
-
-            if (p.completness == CHO_STATS_FULL) {
-                bstate->client.write(username, strlen(username));
-                Serial.printf("UserStats: Wrote %d bytes\n", strlen(username));
-                bstate->client.write(avatarFilename, strlen(avatarFilename));
-                Serial.printf("UserStats: Wrote %d bytes\n", strlen(avatarFilename));
-                bstate->client.write((char*)&p.timezone, sizeof(p.timezone));
-                Serial.printf("UserStats: Wrote %d bytes\n", sizeof(p.timezone));
-                bstate->client.write(city, strlen(city));
-                Serial.printf("UserStats: Wrote %d bytes\n", strlen(city));
-                bstate->client.write((char*)&p.permissions, sizeof(p.permissions));
-                Serial.printf("UserStats: Wrote %d bytes\n", sizeof(p.permissions));
-
-                if (version >= 1183) { // Clients before b1183 don't send long and lat
-                    bstate->client.write((char*)&p.longitude, sizeof(p.longitude));
-                    Serial.printf("UserStats: Wrote %d bytes\n", sizeof(p.longitude));
-                    bstate->client.write((char*)&p.latitude, sizeof(p.latitude));
-                    Serial.printf("UserStats: Wrote %d bytes\n", sizeof(p.latitude));
-                }
-            }
-
-            bstate->client.flush();
-            bstate->writeLock = false;
-            writing = false;
+        if (version >= 1183) { // Clients before b1183 don't send long and lat
+            BufferWriteFloat(buf, p.longitude);
+            BufferWriteFloat(buf, p.longitude);
         }
-    }
-
-    free(statusUpdate);
-    if (p.completness == CHO_STATS_FULL) {
-        free(username);
-        free(avatarFilename);
-        free(city);
     }
 }

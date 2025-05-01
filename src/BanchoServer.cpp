@@ -70,7 +70,7 @@ void SendBanchoPacket(BanchoState* bstate, int packetId, Buffer* buf) {
                 Serial.println("buf->pos");
                 size = buf->pos;
                 Serial.println("bstate->client.write((char*)size, sizeof(size));");
-                bstate->client.write((char*)size, sizeof(size));
+                bstate->client.write((char*)&size, sizeof(size));
                 Serial.println("bstate->client.write((char*)buf->data, size);");
                 bstate->client.write(buf->data, size-1);
             }

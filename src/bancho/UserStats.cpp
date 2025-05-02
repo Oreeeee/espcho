@@ -42,10 +42,10 @@ uint32_t UserStats_Size(UserStats p, uint16_t version) {
 void UserStats_Write(const UserStats &p, BanchoState *bstate, Buffer* buf, const uint16_t version) {
     BufferWriteS32(buf, p.userId);
     BufferWriteU8(buf, p.completness);
-    //StatusUpdate_Serialize(p.statusUpdate, buf);
+    StatusUpdate_Serialize(p.statusUpdate, buf);
 
     if (p.completness >= CHO_STATS_STATISTICS) {
-        BufferWriteU64(buf, p.rankedScore);
+        BufferWriteS64(buf, p.rankedScore);
         BufferWriteFloat(buf, p.accuracy);
         BufferWriteS32(buf, p.playcount);
         BufferWriteS64(buf, p.totalScore);
@@ -53,10 +53,10 @@ void UserStats_Write(const UserStats &p, BanchoState *bstate, Buffer* buf, const
     }
 
     if (p.completness == CHO_STATS_FULL) {
-        //BufferWriteOsuString(buf, p.username);
-        //BufferWriteOsuString(buf, p.avatarFilename);
+        BufferWriteOsuString(buf, p.username);
+        BufferWriteOsuString(buf, p.avatarFilename);
         BufferWriteU8(buf, p.timezone);
-        //BufferWriteOsuString(buf, p.city);
+        BufferWriteOsuString(buf, p.city);
         BufferWriteU8(buf, p.permissions);
 
         if (version >= 1183) { // Clients before b1183 don't send long and lat

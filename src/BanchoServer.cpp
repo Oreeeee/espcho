@@ -52,29 +52,23 @@ BanchoHeader readBanchoPacket(WiFiClient client, char **buf) {
     return h;
 }
 
-void SendBanchoPacket(BanchoState* bstate, int packetId, Buffer* buf) {
+void SendBanchoPacket(BanchoState* bstate, uint16_t packetId, Buffer* buf) {
     bool writing = true;
-    bool compression = false;
+    uint8_t compression = false;
     uint32_t size = 0;
     while (writing) {
         if (!bstate->writeLock) {
             bstate->writeLock = true;
-            Serial.println("bstate->client.write((char*)&packetId, sizeof(packetId));");
             bstate->client.write((char*)&packetId, sizeof(packetId));
-            Serial.println("bstate->client.write((char*)&compression, sizeof(compression));");
             bstate->client.write((char*)&compression, sizeof(compression));
             if (buf == NULL) {
-                Serial.println("bstate->client.write((char*)&size, sizeof(size));");
                 bstate->client.write((char*)&size, sizeof(size));
             } else {
-                Serial.println("buf->pos");
                 size = buf->pos;
-                Serial.println("bstate->client.write((char*)size, sizeof(size));");
+                //Serial.printf("The size is %d\n", size);
                 bstate->client.write((char*)&size, sizeof(size));
-                Serial.println("bstate->client.write((char*)buf->data, size);");
-                bstate->client.write(buf->data, size-1);
+                bstate->client.write(buf->data, size);
             }
-            Serial.println("bstate->client.flush();");
             bstate->client.flush();
             bstate->writeLock = false;
             writing = false;

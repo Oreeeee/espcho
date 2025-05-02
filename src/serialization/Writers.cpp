@@ -26,6 +26,7 @@ int BufferWriteU32(Buffer* buf, uint32_t value) {
     if (buf->pos + 4 > buf->capacity) return -1;
     buf->data[buf->pos++] = value & 0xFF;
     buf->data[buf->pos++] = (value >> 8) & 0xFF;
+    buf->data[buf->pos++] = (value >> 16) & 0xFF;
     buf->data[buf->pos++] = (value >> 24) & 0xFF;
     return 0;
 }
@@ -76,7 +77,7 @@ int BufferWriteOsuString(Buffer* buf, const char* text) {
     }
 
     size_t inStringSize = strlen(text);
-    BufferWriteU8(buf, '\x20'); // 0x20 == expect string
+    BufferWriteU8(buf, '\x0b'); // 0x0b == expect string
 
     // Write the Uleb128 length
     int writeUlebRes = BufferWriteUleb128(buf, inStringSize);

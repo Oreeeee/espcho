@@ -4,23 +4,13 @@
 #include <WiFi.h>
 #include <stdint.h>
 
+#include "serialization/Buffer.h"
+#include "serialization/Writers.h"
+
 uint32_t ChannelAvailable_Size(ChannelAvailable p) {
     return OsuStringSize(p.channelName);
 }
 
-void ChannelAvailable_Write(ChannelAvailable p, BanchoState *bstate) {
-    bool writing = true;
-    while (writing) {
-        if (!bstate->writeLock) {
-            bstate->writeLock = true;
-            char *channelName;
-            WriteOsuString(p.channelName, &channelName);
-            bstate->client.write(channelName, strlen(channelName));
-            bstate->client.flush();
-            free(channelName);
-            bstate->writeLock = false;
-            writing = false;
-        }
-    }
-    
+void ChannelAvailable_Write(ChannelAvailable p, Buffer* buf) {
+    BufferWriteOsuString(buf, p.channelName);
 }

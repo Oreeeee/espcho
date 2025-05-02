@@ -13,6 +13,7 @@
 #include "Globals.h"
 #include "Pinger.h"
 #include "serialization/Buffer.h"
+#include "serialization/Writers.h"
 
 LoginPacket getConnectionInfo(WiFiClient client) {
     LoginPacket lp;
@@ -52,7 +53,7 @@ BanchoHeader readBanchoPacket(WiFiClient client, char **buf) {
     return h;
 }
 
-void SendBanchoPacket(BanchoState* bstate, uint16_t packetId, Buffer* buf) {
+void SendBanchoPacket(BanchoState* bstate, uint16_t packetId, const Buffer* buf) {
     bool writing = true;
     uint8_t compression = false;
     uint32_t size = 0;
@@ -109,7 +110,7 @@ void sendUserStats(BanchoState *bstate, uint32_t userId, char *username, StatusU
     SendBanchoPacket(bstate, CHO_PACKET_USER_STATS, &buf);
 }
 
-void sendChannelJoin(BanchoState *bstate, char *channelName, int packetType) {
+void sendChannelJoin(BanchoState *bstate, const char *channelName, int packetType) {
     // This packet needs to be of type ChannelAvailable or ChannelAvailableAutojoin
     switch (packetType) {
         case CHO_PACKET_CHANNEL_AVAILABLE:
@@ -120,63 +121,37 @@ void sendChannelJoin(BanchoState *bstate, char *channelName, int packetType) {
             Serial.println("Attempted to use wrong type for sendChannelJoin()!");
             return;
     }
-    
-    ChannelAvailable p;
-    p.channelName = (char*)malloc(strlen(channelName) + 1);
-    strncpy(p.channelName, channelName, strlen(channelName) + 1);
 
-    BanchoHeader h;
-    h.packetId = packetType;
-    h.compression = false;
-    h.size = ChannelAvailable_Size(p);
-
-    BanchoHeader_Write(h, bstate);
-    ChannelAvailable_Write(p, bstate);
-
-    free(p.channelName);
-}
-
-void sendEmptyPacket(BanchoState *bstate, int packetType) {
-    BanchoHeader h;
-    h.packetId = packetType;
-    h.compression = false;
-    h.size = 0;
-
-    BanchoHeader_Write(h, bstate);
+    Buffer buf;
+    CreateBuffer(&buf);
+    BufferWriteOsuString(&buf, channelName);
+    SendBanchoPacket(bstate, packetType, &buf);
 }
 
 bool authenticateChoUser(BanchoState *bstate, char *login, char *password, BanchoConnection *bconn) {
-    BanchoHeader h;
-    h.packetId = CHO_PACKET_LOGINREPLY;
-    h.compression = false;
-    h.size = sizeof(LoginReply);
+    Buffer buf;
+    CreateBuffer(&buf);
 
     #ifdef CHO_DISABLE_AUTH
     if (true) {
     #else
     if (strcmp(CHO_APPROVED_USER, login) == 0 && strcmp(CHO_APPROVED_PASSWORD, password) == 0) {
     #endif
-        LoginReply p;
-
         #ifdef CHO_DISABLE_AUTH
         srand(time(NULL));
         uint32_t userId = rand() % 20000 + 1;
-        p.response = userId;
+        BufferWriteU32(&buf, userId);
         bconn->userId = userId;
         #else
-        p.response = CHO_APPROVED_USERID;
+        BufferWriteU32(&buf, CHO_APPROVED_USERID);
         #endif
-        
-        BanchoHeader_Write(h, bstate);
-        LoginReply_Write(p, bstate);
+
+        SendBanchoPacket(bstate, CHO_PACKET_LOGINREPLY, &buf);
         return true;
     }
 
-    LoginReply p;
-    p.response = LOGIN_WRONG_PASS;
-
-    BanchoHeader_Write(h, bstate);
-    LoginReply_Write(p, bstate);
+    BufferWriteU32(&buf, LOGIN_WRONG_PASS);
+    SendBanchoPacket(bstate, CHO_PACKET_LOGINREPLY, &buf);
 
     return false;
 }

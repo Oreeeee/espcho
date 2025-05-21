@@ -1,6 +1,7 @@
 #include "serialization/Readers.h"
 
 #include <cstring>
+#include <HardwareSerial.h>
 #include <stdint.h>
 #include <stddef.h>
 
@@ -72,6 +73,7 @@ int BufferReadOsuString(Buffer* buf, char** dest) {
 
     if (firstByte == '\0') {
         // No string to read
+        *dest = NULL;
         return 0;
     } else if (firstByte != '\x0b') {
         // What the fuck
@@ -80,9 +82,9 @@ int BufferReadOsuString(Buffer* buf, char** dest) {
 
     int length;
     BufferReadUleb128(buf, &length);
-
-    *dest = (char*)malloc(length);
+    *dest = (char*)malloc(length + 1);
     strncpy(*dest, (const char*)&buf->data[buf->pos], length);
+    (*dest)[length] = '\0'; // Account for null terminator which osu doesn't send
     buf->pos += length;
     return 0;
 }
@@ -93,7 +95,7 @@ int BufferReadUleb128(Buffer* buf, int* dest) {
     char byte;
 
     do {
-        byte = buf->data[count];
+        byte = buf->data[buf->pos + count]; // Need to read from a correct start position
         value |= (byte & 0x7F) << (7 * count);
         count++;
     } while (byte & 0x80);

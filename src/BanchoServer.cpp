@@ -12,6 +12,7 @@
 #include "ThreadingUtils.h"
 #include "Globals.h"
 #include "Pinger.h"
+#include "bancho/ChatMessage.h"
 #include "serialization/Buffer.h"
 #include "serialization/Writers.h"
 
@@ -240,29 +241,36 @@ void banchoTask(void *arg) {
                 bconn->client.readBytes(buf.data, h.size);
 
                 switch (h.packetId) {
-                case CHO_PACKET_CHANGE_STATUS:
-                    Serial.printf("%d is changing status\n", bconn->userId);
-                    StatusUpdate p;
-                    StatusUpdate_Deserialize(&buf, &p);
-                    bconn->statusUpdate = p;
-                    break;
-                case CHO_PACKET_REQUEST_STATUS:
-                    Serial.println("Received RequestStatus");
-                    sendUserStats(&bstate, bconn->userId, bconn->username, bconn->statusUpdate, CHO_STATS_STATISTICS, bconn->version);
-                    break;
-                case CHO_PACKET_RECEIVE_UPDATES:
-                    Serial.println("Client wants to receive status updates");
-                    for (int i = 0; i < CHO_MAX_CONNECTIONS; i++) {
-                        BanchoConnection user = connections[i];
-                        if (user.active) {
-                            sendUserStats(&bstate, user.userId, user.username, user.statusUpdate, CHO_STATS_FULL, bconn->version);
+                    case CHO_PACKET_CHANGE_STATUS:
+                        Serial.printf("%d is changing status\n", bconn->userId);
+                        StatusUpdate p;
+                        StatusUpdate_Deserialize(&buf, &p);
+                        bconn->statusUpdate = p;
+                        break;
+                    case CHO_CLIENT_SEND_MESSAGE:
+                        Serial.println("Received message from client");
+                        ChatMessage m;
+                        ChatMessage_Deserialize(&buf, &m);
+                        Serial.printf("Message from %d to '%s'\n", bconn->userId, m.message);
+                        ChatMessage_Free(&m);
+                        break;
+                    case CHO_PACKET_REQUEST_STATUS:
+                        Serial.println("Received RequestStatus");
+                        sendUserStats(&bstate, bconn->userId, bconn->username, bconn->statusUpdate, CHO_STATS_STATISTICS, bconn->version);
+                        break;
+                    case CHO_PACKET_RECEIVE_UPDATES:
+                        Serial.println("Client wants to receive status updates");
+                        for (int i = 0; i < CHO_MAX_CONNECTIONS; i++) {
+                            BanchoConnection user = connections[i];
+                            if (user.active) {
+                                sendUserStats(&bstate, user.userId, user.username, user.statusUpdate, CHO_STATS_FULL, bconn->version);
+                            }
                         }
-                    }
-                    break;
-                case CHO_PACKET_PONG:
-                    break;
-                default:
-                    Serial.printf("Unknown packet received: %d\n", h.packetId);
+                        break;
+                    case CHO_PACKET_PONG:
+                        break;
+                    default:
+                        Serial.printf("Unknown packet received: %d\n", h.packetId);
                 }
 
                 //if (buf != NULL)

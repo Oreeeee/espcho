@@ -223,18 +223,28 @@ void banchoTask(void *arg) {
 
         while (bconn->client.connected()) {
             if (bconn->client.available()) {
-                char *buf = NULL;
+                Buffer buf;
+                CreateBuffer(&buf);
+
                 BanchoHeader h;
-                h = readBanchoPacket(bconn->client, &buf);
+                bconn->client.readBytes((char*)&h.packetId, sizeof(h.packetId));
+                bconn->client.readBytes((char*)&h.compression, sizeof(h.compression));
+                bconn->client.readBytes((char*)&h.size, sizeof(h.size));
+
+                if (h.size >= buf.capacity) {
+                    Serial.println("Received more data than buffer can accept!");
+                    // TODO Handle that case
+                    continue;
+                }
+
+                bconn->client.readBytes(buf.data, h.size);
 
                 switch (h.packetId) {
                 case CHO_PACKET_CHANGE_STATUS:
                     Serial.printf("%d is changing status\n", bconn->userId);
-                    if (buf == NULL) {
-                        Serial.println("buf == NULL");
-                        break;
-                    }
-                    bconn->statusUpdate = StatusUpdate_Deserialize(buf);
+                    StatusUpdate p;
+                    StatusUpdate_Deserialize(&buf, &p);
+                    bconn->statusUpdate = p;
                     break;
                 case CHO_PACKET_REQUEST_STATUS:
                     Serial.println("Received RequestStatus");
@@ -256,7 +266,6 @@ void banchoTask(void *arg) {
                 }
 
                 //if (buf != NULL)
-                free(buf);
             }
         }
 

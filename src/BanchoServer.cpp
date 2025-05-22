@@ -13,6 +13,7 @@
 #include "Globals.h"
 #include "Pinger.h"
 #include "bancho/ChatMessage.h"
+#include "chat/ChatManager.h"
 #include "serialization/Buffer.h"
 #include "serialization/Writers.h"
 
@@ -266,9 +267,7 @@ void banchoTask(void *arg) {
                         Serial.println("Received message from client");
                         ChatMessage m;
                         ChatMessage_Deserialize(&buf, &m);
-                        Serial.printf("Message from %d to '%s'\n", bconn->userId, m.message);
-                        echoChat(&bstate, &m);
-                        ChatMessage_Free(&m);
+                        EnqueueMessage(&m);
                         break;
                     case CHO_PACKET_REQUEST_STATUS:
                         Serial.println("Received RequestStatus");

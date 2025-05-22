@@ -18,6 +18,8 @@
 #endif
 #include <WebServer.h>
 
+#include "chat/ChatManager.h"
+
 WiFiServer server(CHO_PORT);
 
 
@@ -39,6 +41,9 @@ void setup() {
   Serial.println();
 
   Serial.printf("Connected to WiFI! Got IPv4: %s\n", WiFi.localIP().toString());
+
+  Serial.println("Creating chat thread");
+  ChatInit();
 
   Serial.printf("Starting TCP server on port %d\n", CHO_PORT);
   server.begin();

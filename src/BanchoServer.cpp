@@ -148,11 +148,13 @@ bool authenticateChoUser(BanchoState *bstate, char *login, char *password, Banch
         #endif
 
         SendBanchoPacket(bstate, CHO_PACKET_LOGINREPLY, &buf);
+        BufferFree(&buf);
         return true;
     }
 
     BufferWriteU32(&buf, LOGIN_WRONG_PASS);
     SendBanchoPacket(bstate, CHO_PACKET_LOGINREPLY, &buf);
+    BufferFree(&buf);
 
     return false;
 }
@@ -165,6 +167,19 @@ void setEmptyStatus(BanchoConnection *bconn) {
     bconn->statusUpdate.mods = 0;
     bconn->statusUpdate.mode = 0;
     bconn->statusUpdate.beatmapID = 0;
+}
+
+void echoChat(BanchoState *bstate, ChatMessage *m) {
+    // Change the sender to BanchoBot
+    free(m->sender);
+    m->sender = (char*)malloc(10 * sizeof(char));
+    strncpy(m->sender, "BanchoBot", 10);
+
+    Buffer backBuffer;
+    CreateBuffer(&backBuffer);
+    ChatMessage_Serialize(&backBuffer, m);
+    SendBanchoPacket(bstate, CHO_PACKET_SERVER_SEND_MESSAGE, &backBuffer);
+    BufferFree(&backBuffer);
 }
 
 void banchoTask(void *arg) {
@@ -252,11 +267,7 @@ void banchoTask(void *arg) {
                         ChatMessage m;
                         ChatMessage_Deserialize(&buf, &m);
                         Serial.printf("Message from %d to '%s'\n", bconn->userId, m.message);
-                        //m.sender = "BanchoBot";
-                        // Buffer backBuffer;
-                        // CreateBuffer(&backBuffer);
-                        // ChatMessage_Serialize(&backBuffer, &m);
-                        // SendBanchoPacket(&bstate, CHO_PACKET_SERVER_SEND_MESSAGE, &backBuffer);
+                        echoChat(&bstate, &m);
                         ChatMessage_Free(&m);
                         break;
                     case CHO_PACKET_REQUEST_STATUS:
@@ -279,6 +290,7 @@ void banchoTask(void *arg) {
                 }
 
                 //if (buf != NULL)
+                BufferFree(&buf);
             }
         }
 

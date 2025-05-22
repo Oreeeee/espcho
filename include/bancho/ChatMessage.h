@@ -9,6 +9,7 @@ typedef struct {
     char* target;
 } ChatMessage;
 
+void ChatMessage_Serialize(Buffer* buf, ChatMessage* p);
 void ChatMessage_Deserialize(Buffer* buf, ChatMessage* p);
 void ChatMessage_Free(ChatMessage* p);
 

@@ -252,6 +252,11 @@ void banchoTask(void *arg) {
                         ChatMessage m;
                         ChatMessage_Deserialize(&buf, &m);
                         Serial.printf("Message from %d to '%s'\n", bconn->userId, m.message);
+                        //m.sender = "BanchoBot";
+                        // Buffer backBuffer;
+                        // CreateBuffer(&backBuffer);
+                        // ChatMessage_Serialize(&backBuffer, &m);
+                        // SendBanchoPacket(&bstate, CHO_PACKET_SERVER_SEND_MESSAGE, &backBuffer);
                         ChatMessage_Free(&m);
                         break;
                     case CHO_PACKET_REQUEST_STATUS:

@@ -197,6 +197,7 @@ void banchoTask(void *arg) {
         bstate.client = bconn->client;
         bstate.writeLock = false;
         bstate.alive = true;
+        bconn->bstate = &bstate;
 
         Serial.println("Verifying login");
         if (!authenticateChoUser(&bstate, lp.username, lp.password, bconn)) {
@@ -267,6 +268,8 @@ void banchoTask(void *arg) {
                         Serial.println("Received message from client");
                         ChatMessage m;
                         ChatMessage_Deserialize(&buf, &m);
+                        m.senderId = bconn->userId;
+                        m.sender = bconn->username;
                         EnqueueMessage(&m);
                         break;
                     case CHO_PACKET_REQUEST_STATUS:

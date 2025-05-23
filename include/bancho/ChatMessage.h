@@ -7,6 +7,9 @@ typedef struct {
     char* sender;
     char* message;
     char* target;
+
+    // Not a part of the protocol things
+    uint32_t senderId;
 } ChatMessage;
 
 void ChatMessage_Serialize(Buffer* buf, ChatMessage* p);

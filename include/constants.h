@@ -19,4 +19,11 @@
 #define CHO_PRESENCE_FILTER_ALL 1
 #define CHO_PRESENCE_FILTER_FRIENDS 2
 
+#define CHANNEL_LIST_AUTOJOIN_LEN 1
+#define CHANNEL_LIST_LEN 3
+
+// TODO: Is static the best way to do this?
+static const char* ChannelListAutojoin[CHANNEL_LIST_AUTOJOIN_LEN] = {"#osu"};
+static const char* ChannelList[CHANNEL_LIST_LEN] = {"#lobby", "#spectator", "#espcho"};
+
 #endif

@@ -15,6 +15,7 @@
 #include "bancho/ChatMessage.h"
 #include "chat/ChatManager.h"
 #include "serialization/Buffer.h"
+#include "serialization/Readers.h"
 #include "serialization/Writers.h"
 
 LoginPacket getConnectionInfo(WiFiClient client) {
@@ -225,9 +226,16 @@ void banchoTask(void *arg) {
             &pingerTask
         );
 
+        // Send channel list to the client
+        for (int i = 0; i < CHANNEL_LIST_AUTOJOIN_LEN; i++) {
+            sendChannelJoin(&bstate, ChannelListAutojoin[i], CHO_PACKET_CHANNEL_AVAILABLE_AUTOJOIN);
+        }
+        for (int i = 0; i < CHANNEL_LIST_LEN; i++) {
+            sendChannelJoin(&bstate, ChannelList[i], CHO_PACKET_CHANNEL_AVAILABLE);
+        }
+
         // Make client join #osu
         Serial.println("Sending join #osu to client");
-        sendChannelJoin(&bstate, "#osu", CHO_PACKET_CHANNEL_AVAILABLE_AUTOJOIN);
         sendChannelJoin(&bstate, "#osu", CHO_PACKET_CHANNEL_JOIN_SUCCESS);
         Serial.println("Sent #osu request");
 
@@ -284,6 +292,17 @@ void banchoTask(void *arg) {
                                 sendUserStats(&bstate, user.userId, user.username, user.statusUpdate, CHO_STATS_FULL, bconn->version);
                             }
                         }
+                        break;
+                    case CHO_PACKET_CHANNEL_JOIN:
+                        char* channelName;
+                        BufferReadOsuString(&buf, &channelName);
+                        Serial.printf("Received channel join for %s\n", channelName);
+                        /*
+                        * TODO: Maybe add the channel name to the list of channels for the connection
+                            to not send messages to the clients that are not in that specific channel
+                        */
+                        sendChannelJoin(&bstate, channelName, CHO_PACKET_CHANNEL_JOIN_SUCCESS);
+                        free(channelName);
                         break;
                     case CHO_PACKET_PONG:
                         break;

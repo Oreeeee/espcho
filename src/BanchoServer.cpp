@@ -280,6 +280,15 @@ void banchoTask(void *arg) {
                         m.sender = bconn->username;
                         EnqueueMessage(&m);
                         break;
+                    case CHO_PACKET_CLIENT_MESSAGE_PRIVATE:
+                        Serial.println("Received private message from client");
+                        ChatMessage pm;
+                        ChatMessage_Deserialize(&buf, &pm);
+                        pm.senderId = bconn->userId;
+                        pm.sender = bconn->username;
+                        pm.privateMessage = true;
+                        EnqueueMessage(&pm);
+                        break;
                     case CHO_PACKET_REQUEST_STATUS:
                         Serial.println("Received RequestStatus");
                         sendUserStats(&bstate, bconn->userId, bconn->username, bconn->statusUpdate, CHO_STATS_STATISTICS, bconn->version);
@@ -329,4 +338,17 @@ void banchoTask(void *arg) {
         Serial.println("Exitting task");
         vTaskDelete(NULL);
     }
+}
+/*
+* Gets BanchoConnection by the name
+*/
+BanchoConnection* GetClientByName(char *name) {
+    for (int i = 0; i < CHO_MAX_CONNECTIONS; i++) {
+        BanchoConnection *user = &connections[i];
+        // TODO: Use safe strncmp
+        if (user->client.connected() && strcmp(name, user->username) == 0) {
+            return &connections[i];
+        }
+    }
+    return NULL;
 }

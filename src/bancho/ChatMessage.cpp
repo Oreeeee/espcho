@@ -17,6 +17,7 @@ void ChatMessage_Deserialize(Buffer* buf, ChatMessage* p) {
     BufferReadOsuString(buf, &p->sender);
     BufferReadOsuString(buf, &p->message);
     BufferReadOsuString(buf, &p->target);
+    p->privateMessage = false;
 }
 
 void ChatMessage_Free(ChatMessage* p) {

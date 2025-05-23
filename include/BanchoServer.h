@@ -14,5 +14,6 @@ void SendBanchoPacket(BanchoState* bstate, uint16_t packetId, const Buffer* buf)
 void sendChannelJoin(BanchoState *bstate, char *channelName, int packetType);
 bool authenticateChoUser(BanchoState *bstate, char *login, char *password, BanchoConnection *bconn);
 void banchoTask(void *arg);
+BanchoConnection* GetClientByName(char *name);
 
 #endif

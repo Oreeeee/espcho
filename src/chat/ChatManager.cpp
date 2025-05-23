@@ -29,18 +29,37 @@ void ChatLoop(void *args) {
         usernameTemp[usernameSize] = '\0';
         msg->sender = usernameTemp;
 
-        for (int i = 0; i < CHO_MAX_CONNECTIONS; i++) {
-            BanchoConnection bconn = connections[i];
-            // Send messages only to relevant clients
-            if (bconn.client.connected() && bconn.userId != msg->senderId) {
-                Buffer buf;
-                CreateBuffer(&buf);
-                ChatMessage_Serialize(&buf, msg);
-                SendBanchoPacket(bconn.bstate, CHO_PACKET_SERVER_SEND_MESSAGE, &buf);
+        BanchoConnection *bconn = NULL;
+        if (msg->privateMessage) {
+            // Private message, send only to one specific client
+            bconn = GetClientByName(msg->target);
+            if (bconn == NULL) {
+                Serial.println("Cannot find target to send a private message");
+            } else {
+                SendMessage(msg, bconn);
+            }
+        } else {
+            // Public message, send to all clients
+            for (int i = 0; i < CHO_MAX_CONNECTIONS; i++) {
+                bconn = &connections[i];
+                // Send messages only to relevant clients
+                if (bconn->client.connected() && bconn->userId != msg->senderId) {
+                    SendMessage(msg, bconn);
+                }
             }
         }
+
         ChatMessage_Free(msg);
     }
+}
+
+// Send message to a specified client
+void SendMessage(ChatMessage *msg, BanchoConnection *bconn) {
+    Buffer buf;
+    CreateBuffer(&buf);
+    ChatMessage_Serialize(&buf, msg);
+    SendBanchoPacket(bconn->bstate, CHO_PACKET_SERVER_SEND_MESSAGE, &buf);
+    BufferFree(&buf);
 }
 
 void EnqueueMessage(ChatMessage *message) {

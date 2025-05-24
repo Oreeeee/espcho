@@ -128,7 +128,7 @@ bool authenticateChoUser(BanchoState *bstate, char *login, char *password, Banch
         #ifdef CHO_DISABLE_AUTH
         srand(time(NULL));
         uint32_t userId = rand() % 20000 + 1;
-        BufferWriteU32(&buf, userId);
+        BufferWriteS32(&buf, userId);
         bconn->userId = userId;
         #else
         BufferWriteU32(&buf, CHO_APPROVED_USERID);
@@ -139,7 +139,7 @@ bool authenticateChoUser(BanchoState *bstate, char *login, char *password, Banch
         return true;
     }
 
-    BufferWriteU32(&buf, LOGIN_WRONG_PASS);
+    BufferWriteS32(&buf, LOGIN_WRONG_PASS);
     SendBanchoPacket(bstate, CHOPKT_LOGINREPLY, &buf);
     BufferFree(&buf);
 

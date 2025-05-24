@@ -36,9 +36,9 @@ esp_err_t scoreSubHandler(httpd_req_t *req) {
         Serial.printf("[HTTP] Got score data: %s\n", value);
 
         Serial.println("Parsing score...");
-        ScoreSubData s = parseScoreString(value);
+        ScoreSubData s = ParseScoreString(value);
         Serial.printf("Score submitted by %s\n", s.username);
-        freeScoreSubData(s);
+        FreeScoreSubData(s);
     } else {
         Serial.println("[HTTP] No score data");
         httpd_resp_send(req, "error: ban", HTTPD_RESP_USE_STRLEN);

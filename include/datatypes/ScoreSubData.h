@@ -24,7 +24,7 @@ typedef struct {
     uint16_t version;
 } ScoreSubData;
 
-ScoreSubData parseScoreString(char *in);
-void freeScoreSubData(ScoreSubData s);
+ScoreSubData ParseScoreString(char *in);
+void FreeScoreSubData(ScoreSubData s);
 
 #endif

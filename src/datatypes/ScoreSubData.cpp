@@ -2,7 +2,7 @@
 #include "datatypes/StringBool.h"
 #include <Arduino.h>
 
-ScoreSubData parseScoreString(char *in) {
+ScoreSubData ParseScoreString(char *in) {
     ScoreSubData s;
 
     // Buffers for strings
@@ -94,7 +94,7 @@ ScoreSubData parseScoreString(char *in) {
 }
 
 // Free all the strings in ScoreSubData
-void freeScoreSubData(ScoreSubData s) {
+void FreeScoreSubData(ScoreSubData s) {
     free(s.fileChecksum);
     free(s.username);
     free(s.onlineScoreChecksum);

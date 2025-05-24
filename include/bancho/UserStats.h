@@ -34,7 +34,6 @@ typedef struct {
     float latitude;
 } UserStats;
 
-uint32_t UserStats_Size(UserStats p, uint16_t version);
 void UserStats_Write(const UserStats &p, BanchoState *bstate, Buffer* buf, const uint16_t version);
 
 #endif

@@ -3,11 +3,7 @@
 #include <WiFiServer.h>
 #include <WiFiClient.h>
 #include "config.h"
-#include "constants.h"
 #include "BanchoServer.h"
-#include "bancho/BanchoPackets.h"
-#include "BanchoState.h"
-#include "Pinger.h"
 #include "Globals.h"
 #include "ThreadingUtils.h"
 #include "HttpServer.h"

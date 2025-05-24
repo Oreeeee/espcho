@@ -2,7 +2,6 @@
 #define BUFFER_H
 
 #include <stdint.h>
-#include "constants.h"
 
 typedef struct {
     uint16_t pos;

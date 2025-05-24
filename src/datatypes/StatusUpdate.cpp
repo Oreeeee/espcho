@@ -1,5 +1,4 @@
 #include "datatypes/StatusUpdate.h"
-#include "datatypes/OsuString.h"
 #include <string.h>
 #include <Arduino.h>
 
@@ -7,17 +6,7 @@
 #include "serialization/Readers.h"
 #include "serialization/Writers.h"
 
-int StatusUpdate_Size(StatusUpdate p) {
-    return sizeof(p.status) +
-        sizeof(p.beatmapUpdate) +
-        OsuStringSize(p.statusText) +
-        OsuStringSize(p.beatmapMD5) +
-        sizeof(p.mods) +
-        sizeof(p.mode) +
-        sizeof(p.beatmapID);
-}
-
-void StatusUpdate_Serialize(const StatusUpdate &p, Buffer* buf) {
+void StatusUpdate_Write(const StatusUpdate &p, Buffer* buf) {
     BufferWriteU8(buf, p.status);
     BufferWriteU8(buf, p.beatmapUpdate);
     if (p.beatmapUpdate) {
@@ -29,7 +18,7 @@ void StatusUpdate_Serialize(const StatusUpdate &p, Buffer* buf) {
     }
 }
 
-void StatusUpdate_Deserialize(Buffer* buf, StatusUpdate* p) {
+void StatusUpdate_Read(Buffer* buf, StatusUpdate* p) {
     BufferReadU8(buf, &p->status);
     BufferReadBool(buf, &p->beatmapUpdate);
     BufferReadOsuString(buf, &p->statusText);

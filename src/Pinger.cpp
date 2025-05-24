@@ -20,6 +20,6 @@ void PingClient(void *arg) {
         Serial.println("[PINGER] Pinging");
         #endif
         
-        SendBanchoPacket(bstate, CHO_PACKET_PING, NULL);
+        SendBanchoPacket(bstate, CHOPKT_PING, NULL);
     }
 }

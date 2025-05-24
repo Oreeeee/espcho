@@ -14,8 +14,7 @@ typedef struct {
     int32_t beatmapID;
 } StatusUpdate;
 
-int StatusUpdate_Size(StatusUpdate p);
-void StatusUpdate_Serialize(const StatusUpdate &p, Buffer* buf);
-void StatusUpdate_Deserialize(Buffer* buf, StatusUpdate* p);
+void StatusUpdate_Read(Buffer* buf, StatusUpdate* p);
+void StatusUpdate_Write(const StatusUpdate &p, Buffer* buf);
 
 #endif

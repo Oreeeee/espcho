@@ -1,5 +1,5 @@
-#ifndef CONFIG_EXAMPLE_H
-#define CONFIG_EXAMPLE_H
+#ifndef CONFIG_H
+#define CONFIG_H
 
 /*
     This is an example config for espcho

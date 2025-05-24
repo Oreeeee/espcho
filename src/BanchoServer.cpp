@@ -3,13 +3,10 @@
 #include "config.h"
 #include "constants.h"
 #include "bancho/LoginPacket.h"
-#include "bancho/LoginReply.h"
 #include "bancho/BanchoHeader.h"
 #include "bancho/BanchoPackets.h"
 #include "bancho/UserStats.h"
-#include "bancho/ChannelAvailable.h"
 #include "BanchoState.h"
-#include "ThreadingUtils.h"
 #include "Globals.h"
 #include "Pinger.h"
 #include "bancho/ChatMessage.h"
@@ -45,17 +42,6 @@ int getClientVersion(LoginPacket lp) {
     return version;
 }
 
-BanchoHeader readBanchoPacket(WiFiClient client, char **buf) {
-    BanchoHeader h = BanchoHeader_Read(client);
-    Serial.printf("Received header: %d, %x, %d\n", h.packetId, h.compression, h.size);
-    *buf = (char*)malloc(h.size); // Doing this makes it not require checking if buf != NULL before free(buf)
-    if (h.size) {
-        client.readBytes(*buf, h.size);
-        Serial.printf("Received data: %s\n", buf);
-    }
-    return h;
-}
-
 void SendBanchoPacket(BanchoState* bstate, uint16_t packetId, const Buffer* buf) {
     bool writing = true;
     uint8_t compression = false;
@@ -69,7 +55,6 @@ void SendBanchoPacket(BanchoState* bstate, uint16_t packetId, const Buffer* buf)
                 bstate->client.write((char*)&size, sizeof(size));
             } else {
                 size = buf->pos;
-                //Serial.printf("The size is %d\n", size);
                 bstate->client.write((char*)&size, sizeof(size));
                 bstate->client.write(buf->data, size);
             }
@@ -110,15 +95,15 @@ void sendUserStats(BanchoState *bstate, uint32_t userId, char *username, StatusU
     Serial.println("UserStats_Write(p, bstate, &buf, version);");
     UserStats_Write(p, bstate, &buf, version);
     Serial.println("SendBanchoPacket(bstate, CHO_PACKET_USER_STATS, &buf);");
-    SendBanchoPacket(bstate, CHO_PACKET_USER_STATS, &buf);
+    SendBanchoPacket(bstate, CHOPKT_USER_STATS, &buf);
 }
 
 void sendChannelJoin(BanchoState *bstate, const char *channelName, int packetType) {
     // This packet needs to be of type ChannelAvailable or ChannelAvailableAutojoin
     switch (packetType) {
-        case CHO_PACKET_CHANNEL_AVAILABLE:
-        case CHO_PACKET_CHANNEL_AVAILABLE_AUTOJOIN:
-        case CHO_PACKET_CHANNEL_JOIN_SUCCESS:
+        case CHOPKT_CHANNEL_AVAILABLE:
+        case CHOPKT_CHANNEL_AVAILABLE_AUTOJOIN:
+        case CHOPKT_CHANNEL_JOIN_SUCCESS:
             break;
         default:
             Serial.println("Attempted to use wrong type for sendChannelJoin()!");
@@ -149,13 +134,13 @@ bool authenticateChoUser(BanchoState *bstate, char *login, char *password, Banch
         BufferWriteU32(&buf, CHO_APPROVED_USERID);
         #endif
 
-        SendBanchoPacket(bstate, CHO_PACKET_LOGINREPLY, &buf);
+        SendBanchoPacket(bstate, CHOPKT_LOGINREPLY, &buf);
         BufferFree(&buf);
         return true;
     }
 
     BufferWriteU32(&buf, LOGIN_WRONG_PASS);
-    SendBanchoPacket(bstate, CHO_PACKET_LOGINREPLY, &buf);
+    SendBanchoPacket(bstate, CHOPKT_LOGINREPLY, &buf);
     BufferFree(&buf);
 
     return false;
@@ -169,19 +154,6 @@ void setEmptyStatus(BanchoConnection *bconn) {
     bconn->statusUpdate.mods = 0;
     bconn->statusUpdate.mode = 0;
     bconn->statusUpdate.beatmapID = 0;
-}
-
-void echoChat(BanchoState *bstate, ChatMessage *m) {
-    // Change the sender to BanchoBot
-    free(m->sender);
-    m->sender = (char*)malloc(10 * sizeof(char));
-    strncpy(m->sender, "BanchoBot", 10);
-
-    Buffer backBuffer;
-    CreateBuffer(&backBuffer);
-    ChatMessage_Serialize(&backBuffer, m);
-    SendBanchoPacket(bstate, CHO_PACKET_SERVER_SEND_MESSAGE, &backBuffer);
-    BufferFree(&backBuffer);
 }
 
 void banchoTask(void *arg) {
@@ -228,15 +200,15 @@ void banchoTask(void *arg) {
 
         // Send channel list to the client
         for (int i = 0; i < CHANNEL_LIST_AUTOJOIN_LEN; i++) {
-            sendChannelJoin(&bstate, ChannelListAutojoin[i], CHO_PACKET_CHANNEL_AVAILABLE_AUTOJOIN);
+            sendChannelJoin(&bstate, ChannelListAutojoin[i], CHOPKT_CHANNEL_AVAILABLE_AUTOJOIN);
         }
         for (int i = 0; i < CHANNEL_LIST_LEN; i++) {
-            sendChannelJoin(&bstate, ChannelList[i], CHO_PACKET_CHANNEL_AVAILABLE);
+            sendChannelJoin(&bstate, ChannelList[i], CHOPKT_CHANNEL_AVAILABLE);
         }
 
         // Make client join #osu
         Serial.println("Sending join #osu to client");
-        sendChannelJoin(&bstate, "#osu", CHO_PACKET_CHANNEL_JOIN_SUCCESS);
+        sendChannelJoin(&bstate, "#osu", CHOPKT_CHANNEL_JOIN_SUCCESS);
         Serial.println("Sent #osu request");
 
         // Set own status
@@ -266,13 +238,13 @@ void banchoTask(void *arg) {
                 bconn->client.readBytes(buf.data, h.size);
 
                 switch (h.packetId) {
-                    case CHO_PACKET_CHANGE_STATUS:
+                    case CHOPKT_CHANGE_STATUS:
                         Serial.printf("%d is changing status\n", bconn->userId);
                         StatusUpdate p;
-                        StatusUpdate_Deserialize(&buf, &p);
+                        StatusUpdate_Read(&buf, &p);
                         bconn->statusUpdate = p;
                         break;
-                    case CHO_CLIENT_SEND_MESSAGE:
+                    case CHOPKT_CLIENT_SEND_MESSAGE:
                         Serial.println("Received message from client");
                         ChatMessage m;
                         ChatMessage_Deserialize(&buf, &m);
@@ -280,7 +252,7 @@ void banchoTask(void *arg) {
                         m.sender = bconn->username;
                         EnqueueMessage(&m);
                         break;
-                    case CHO_PACKET_CLIENT_MESSAGE_PRIVATE:
+                    case CHOPKT_CLIENT_MESSAGE_PRIVATE:
                         Serial.println("Received private message from client");
                         ChatMessage pm;
                         ChatMessage_Deserialize(&buf, &pm);
@@ -289,11 +261,11 @@ void banchoTask(void *arg) {
                         pm.privateMessage = true;
                         EnqueueMessage(&pm);
                         break;
-                    case CHO_PACKET_REQUEST_STATUS:
+                    case CHOPKT_REQUEST_STATUS:
                         Serial.println("Received RequestStatus");
                         sendUserStats(&bstate, bconn->userId, bconn->username, bconn->statusUpdate, CHO_STATS_STATISTICS, bconn->version);
                         break;
-                    case CHO_PACKET_RECEIVE_UPDATES:
+                    case CHOPKT_RECEIVE_UPDATES:
                         Serial.println("Client wants to receive status updates");
                         for (int i = 0; i < CHO_MAX_CONNECTIONS; i++) {
                             BanchoConnection user = connections[i];
@@ -302,7 +274,7 @@ void banchoTask(void *arg) {
                             }
                         }
                         break;
-                    case CHO_PACKET_CHANNEL_JOIN:
+                    case CHOPKT_CHANNEL_JOIN:
                         char* channelName;
                         BufferReadOsuString(&buf, &channelName);
                         Serial.printf("Received channel join for %s\n", channelName);
@@ -310,10 +282,10 @@ void banchoTask(void *arg) {
                         * TODO: Maybe add the channel name to the list of channels for the connection
                             to not send messages to the clients that are not in that specific channel
                         */
-                        sendChannelJoin(&bstate, channelName, CHO_PACKET_CHANNEL_JOIN_SUCCESS);
+                        sendChannelJoin(&bstate, channelName, CHOPKT_CHANNEL_JOIN_SUCCESS);
                         free(channelName);
                         break;
-                    case CHO_PACKET_PONG:
+                    case CHOPKT_PONG:
                         break;
                     default:
                         Serial.printf("Unknown packet received: %d\n", h.packetId);

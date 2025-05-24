@@ -7,7 +7,6 @@
 #include "BanchoState.h"
 #include "BanchoConnection.h"
 
-BanchoHeader readBanchoPacket(WiFiClient client, char *buf);
 LoginPacket getConnectionInfo(WiFiClient client);
 void sendUserStats(BanchoState *bstate, uint8_t completness, uint16_t version);
 void SendBanchoPacket(BanchoState* bstate, uint16_t packetId, const Buffer* buf);

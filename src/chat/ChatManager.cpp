@@ -58,7 +58,7 @@ void SendMessage(ChatMessage *msg, BanchoConnection *bconn) {
     Buffer buf;
     CreateBuffer(&buf);
     ChatMessage_Serialize(&buf, msg);
-    SendBanchoPacket(bconn->bstate, CHO_PACKET_SERVER_SEND_MESSAGE, &buf);
+    SendBanchoPacket(bconn->bstate, CHOPKT_SERVER_SEND_MESSAGE, &buf);
     BufferFree(&buf);
 }
 

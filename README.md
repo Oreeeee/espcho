@@ -1,6 +1,8 @@
 # espcho
 Experimental osu! server for 2010 clients, running on ESP32. It's designed for the b1596 version of the game, but additionally other versions between b695 and b1719 are working to some extent.
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Oreeeee/espcho)
+
 ## Status
 This server is very experimental, it will probably never be production ready (why would you run a production server on a microcontroller anyways?)
 

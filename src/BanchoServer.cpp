@@ -43,26 +43,23 @@ int getClientVersion(LoginPacket lp) {
 }
 
 void SendBanchoPacket(BanchoState* bstate, uint16_t packetId, const Buffer* buf) {
-    bool writing = true;
     uint8_t compression = false;
     uint32_t size = 0;
-    while (writing) {
-        if (!bstate->writeLock) {
-            bstate->writeLock = true;
-            bstate->client.write((char*)&packetId, sizeof(packetId));
-            bstate->client.write((char*)&compression, sizeof(compression));
-            if (buf == NULL) {
-                bstate->client.write((char*)&size, sizeof(size));
-            } else {
-                size = buf->pos;
-                bstate->client.write((char*)&size, sizeof(size));
-                bstate->client.write(buf->data, size);
-            }
-            bstate->client.flush();
-            bstate->writeLock = false;
-            writing = false;
-        }
+
+    xSemaphoreTake(bstate->writeLock, portMAX_DELAY);
+
+    bstate->client.write((char*)&packetId, sizeof(packetId));
+    bstate->client.write((char*)&compression, sizeof(compression));
+    if (buf == NULL) {
+        bstate->client.write((char*)&size, sizeof(size));
+    } else {
+        size = buf->pos;
+        bstate->client.write((char*)&size, sizeof(size));
+        bstate->client.write(buf->data, size);
     }
+    bstate->client.flush();
+
+    xSemaphoreGive(bstate->writeLock);
 }
 
 void sendUserStats(BanchoState *bstate, uint32_t userId, char *username, StatusUpdate statusUpdate, uint8_t completness, uint16_t version) {
@@ -87,14 +84,10 @@ void sendUserStats(BanchoState *bstate, uint32_t userId, char *username, StatusU
         p.city = "peppy's hidden bunker";
     }
 
-    Serial.println("Buffer buf;");
     Buffer buf;
-    Serial.println("CreateBuffer(&buf);");
     CreateBuffer(&buf);
 
-    Serial.println("UserStats_Write(p, bstate, &buf, version);");
     UserStats_Write(p, bstate, &buf, version);
-    Serial.println("SendBanchoPacket(bstate, CHO_PACKET_USER_STATS, &buf);");
     SendBanchoPacket(bstate, CHOPKT_USER_STATS, &buf);
 }
 
@@ -168,7 +161,7 @@ void banchoTask(void *arg) {
 
         BanchoState bstate;
         bstate.client = bconn->client;
-        bstate.writeLock = false;
+        bstate.writeLock = xSemaphoreCreateMutex();
         bstate.alive = true;
         bconn->bstate = &bstate;
 

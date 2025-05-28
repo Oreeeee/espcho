@@ -5,7 +5,8 @@
 
 typedef struct {
     WiFiClient client;
-    bool writeLock;
+    SemaphoreHandle_t writeLock;
+    //bool writeLock;
     bool alive;
 } BanchoState;
 

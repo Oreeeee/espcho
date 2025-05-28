@@ -4,22 +4,22 @@
 #include "config.h"
 #include <Arduino.h>
 
+#include "Globals.h"
+
 void PingClient(void *arg) {
-    BanchoState *bstate = (BanchoState*)arg;
+    BanchoConnection *bconn;
     while (true) {
         vTaskDelay(pdMS_TO_TICKS(10000)); // Wait for every 10 seconds to ping
-        if (!bstate->alive) {
-            // TODO: Pinger doesn't always end
-            #ifdef CHO_LOG_PINGER
-            Serial.println("[PINGER] Quitting");
-            #endif
 
-            vTaskDelete(NULL);
+        // Ping every alive client
+        for (int i = 0; i < CHO_MAX_CONNECTIONS; i++) {
+            bconn = &connections[i];
+            if (bconn->client.connected()) {
+#ifdef CHO_LOG_PINGER
+                Serial.printf("[PINGER] Pinging client %d\n", i);
+#endif
+                SendBanchoPacket(bconn->bstate, CHOPKT_PING, NULL);
+            }
         }
-        #ifdef CHO_LOG_PINGER
-        Serial.println("[PINGER] Pinging");
-        #endif
-        
-        SendBanchoPacket(bstate, CHOPKT_PING, NULL);
     }
 }

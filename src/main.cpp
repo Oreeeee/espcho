@@ -14,6 +14,7 @@
 #endif
 #include <WebServer.h>
 
+#include "Pinger.h"
 #include "chat/ChatManager.h"
 
 WiFiServer server(CHO_PORT);
@@ -40,6 +41,17 @@ void setup() {
 
   Serial.println("Creating chat thread");
   ChatInit();
+
+  // Create pinger task
+  TaskHandle_t pingerTask;
+  xTaskCreate(
+      PingClient,
+      "Pinger",
+      2048,
+      NULL,
+      1,
+      &pingerTask
+  );
 
   Serial.printf("Starting TCP server on port %d\n", CHO_PORT);
   server.begin();

@@ -8,7 +8,6 @@
 #include "bancho/UserStats.h"
 #include "BanchoState.h"
 #include "Globals.h"
-#include "Pinger.h"
 #include "bancho/ChatMessage.h"
 #include "chat/ChatManager.h"
 #include "serialization/Buffer.h"
@@ -179,17 +178,6 @@ void banchoTask(void *arg) {
         bconn->version = getClientVersion(lp);
         bconn->username = (char*)malloc(strlen(lp.username) + 1);
         strncpy(bconn->username, lp.username, strlen(lp.username) + 1);
-
-        // Create pinger task
-        TaskHandle_t pingerTask;
-        xTaskCreate(
-            PingClient,
-            "Pinger",
-            1536,
-            &bstate,
-            1,
-            &pingerTask
-        );
 
         // Send channel list to the client
         for (int i = 0; i < CHANNEL_LIST_AUTOJOIN_LEN; i++) {

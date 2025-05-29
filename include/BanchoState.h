@@ -1,13 +1,14 @@
 #ifndef BANCHOSTATE_H
 #define BANCHOSTATE_H
 
-#include <WiFi.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
 
 typedef struct {
-    WiFiClient client;
     SemaphoreHandle_t writeLock;
     //bool writeLock;
     bool alive;
+    int clientSock;
 } BanchoState;
 
 #endif

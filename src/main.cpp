@@ -7,6 +7,7 @@
 #include "Globals.h"
 #include "ThreadingUtils.h"
 #include "HttpServer.h"
+#include <lwip/sockets.h>
 
 #ifdef CHO_DISABLE_BROWNOUT
 #include "soc/soc.h"
@@ -17,8 +18,8 @@
 #include "Pinger.h"
 #include "chat/ChatManager.h"
 
-WiFiServer server(CHO_PORT);
-
+//WiFiServer server(CHO_PORT);
+int sockfd = 0;
 
 void setup() {
   #ifdef CHO_DISABLE_BROWNOUT
@@ -54,43 +55,99 @@ void setup() {
   );
 
   Serial.printf("Starting TCP server on port %d\n", CHO_PORT);
-  server.begin();
+
+  struct sockaddr_in server;
+  server.sin_family = AF_INET;
+  server.sin_port = htons(CHO_PORT);
+  server.sin_addr.s_addr = htonl(INADDR_ANY);
+
+  if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+    Serial.println("Failed to create socket");
+    return;
+  }
+
+  if ((bind(sockfd, (struct sockaddr *)&server, sizeof(server))) < 0) {
+    Serial.println("Failed to bind");
+    return;
+  }
+
+  if (listen(sockfd, 10) < 0) {
+    Serial.println("Failed to listen");
+    return;
+  }
+
   Serial.println("Listening...");
 
   httpServerC = initHttpServer_c();
 }
 
 void loop() {
-  WiFiClient client = server.available();
-  if (client) {
-    Serial.printf("Accepted connection from %s:%d\n", client.remoteIP().toString(), client.remotePort());
-    Serial.println("Trying to start Bancho task");
-
-    int freeConnIndex = getFreeConnectionIndex();
-
-    if (freeConnIndex == -1) {
-      Serial.println("No free connection slots left, dropping connection");
-      client.stop();
-      return;
-    }
-
-    BanchoConnection bconn;
-    bconn.client = client;
-    bconn.index = freeConnIndex;
-    bconn.active = true;
-
-    connections[freeConnIndex] = bconn;
-
-    Serial.println("Starting Bancho task");
-    xTaskCreate(
-      banchoTask,
-      "Bancho",
-      4096,
-      &connections[freeConnIndex],
-      1,
-      &bconn.task
-    );
-    Serial.println("Started Bancho task");
+  struct sockaddr_in client;
+  socklen_t clientAddressLen = 0;
+  int clientSock;
+  if ((clientSock = accept(sockfd, (struct sockaddr *)&client, &clientAddressLen)) < 0) {
+    Serial.println("Failed to accept connection");
+    return;
   }
+
+  Serial.printf("Acepted connection from %s:%d\n", inet_ntoa(client.sin_addr), client.sin_port);
+  Serial.println("Trying to start Bancho task");
+
+  int freeConnIndex = getFreeConnectionIndex();
+
+  if (freeConnIndex == -1) {
+    Serial.println("No free connection slots left, dropping connection");
+    close(clientSock);
+    return;
+  }
+
+  BanchoConnection bconn;
+  bconn.clientSock = clientSock;
+  bconn.index = freeConnIndex;
+  bconn.active = true;
+
+  connections[freeConnIndex] = bconn;
+
+  Serial.println("Starting Bancho task");
+  xTaskCreate(
+    banchoTask,
+    "Bancho",
+    4096,
+    &connections[freeConnIndex],
+    1,
+    &bconn.task
+    );
+  Serial.println("Started Bancho task");
+  // close(clientSock);
+  // if (client) {
+  //   Serial.printf("Accepted connection from %s:%d\n", client.remoteIP().toString(), client.remotePort());
+  //   Serial.println("Trying to start Bancho task");
+  //
+  //   int freeConnIndex = getFreeConnectionIndex();
+  //
+  //   if (freeConnIndex == -1) {
+  //     Serial.println("No free connection slots left, dropping connection");
+  //     client.stop();
+  //     return;
+  //   }
+  //
+  //   BanchoConnection bconn;
+  //   bconn.client = client;
+  //   bconn.index = freeConnIndex;
+  //   bconn.active = true;
+  //
+  //   connections[freeConnIndex] = bconn;
+  //
+  //   Serial.println("Starting Bancho task");
+  //   xTaskCreate(
+  //     banchoTask,
+  //     "Bancho",
+  //     4096,
+  //     &connections[freeConnIndex],
+  //     1,
+  //     &bconn.task
+  //   );
+  //   Serial.println("Started Bancho task");
+  // }
   //httpServer.handleClient();
 }

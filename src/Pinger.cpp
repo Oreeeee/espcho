@@ -14,7 +14,7 @@ void PingClient(void *arg) {
         // Ping every alive client
         for (int i = 0; i < CHO_MAX_CONNECTIONS; i++) {
             bconn = &connections[i];
-            if (bconn->client.connected()) {
+            if (bconn->active) {
 #ifdef CHO_LOG_PINGER
                 Serial.printf("[PINGER] Pinging client %d\n", i);
 #endif

@@ -1,13 +1,12 @@
 #ifndef BANCHO_CONNECTION_H
 #define BANCHO_CONNECTION_H
 
-#include <WiFi.h>
 #include <stdint.h>
 #include "datatypes/StatusUpdate.h"
 #include "BanchoState.h"
 
 typedef struct {
-    WiFiClient client;
+    int clientSock;
     TaskHandle_t task;
     int index;
     bool active;

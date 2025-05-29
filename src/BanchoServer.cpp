@@ -1,5 +1,7 @@
 #include <Arduino.h>
 #include <WiFi.h>
+#include <lwip/sockets.h>
+
 #include "config.h"
 #include "constants.h"
 #include "bancho/LoginPacket.h"
@@ -14,19 +16,39 @@
 #include "serialization/Readers.h"
 #include "serialization/Writers.h"
 
+ssize_t recv_until(int sock, char terminator, char *buffer, size_t maxlen) {
+    size_t i = 0;
+    char c;
+
+    while (i < maxlen) {
+        ssize_t n = recv(sock, &c, 1, 0);
+        if (n <= 0) {
+            return (n == 0 && i > 0) ? i : -1;
+        }
+
+        buffer[i++] = c;
+        if (c == terminator) {
+            break;
+        }
+    }
+
+    return i;
+}
+
 LoginPacket getConnectionInfo(WiFiClient client) {
     LoginPacket lp;
 
     lp.username = (char*)calloc(CHO_MAX_LOGIN_STR, sizeof(char));
     lp.password = (char*)calloc(CHO_MAX_LOGIN_STR, sizeof(char));
     lp.clientInfo = (char*)calloc(CHO_MAX_LOGIN_STR, sizeof(char));
+    char dummy;
 
-    client.readBytesUntil('\r', lp.username, CHO_MAX_LOGIN_STR);
-    client.read(); // \n
-    client.readBytesUntil('\r', lp.password, CHO_MAX_LOGIN_STR);
-    client.read(); // \n
-    client.readBytesUntil('\r', lp.clientInfo, CHO_MAX_LOGIN_STR);
-    client.read(); // \n
+    recv_until(client, '\r', lp.username, CHO_MAX_LOGIN_STR);
+    recv(client, &dummy, 1, 0); // \n
+    recv_until(client, '\r', lp.password, CHO_MAX_LOGIN_STR);
+    recv(client, &dummy, 1, 0); // \n
+    recv_until(client, '\r', lp.clientInfo, CHO_MAX_LOGIN_STR);
+    recv(client, &dummy, 1, 0); // \n
     
     return lp;
 }
@@ -47,16 +69,16 @@ void SendBanchoPacket(BanchoState* bstate, uint16_t packetId, const Buffer* buf)
 
     xSemaphoreTake(bstate->writeLock, portMAX_DELAY);
 
-    bstate->client.write((char*)&packetId, sizeof(packetId));
-    bstate->client.write((char*)&compression, sizeof(compression));
+    send(bstate->clientSock, &packetId, sizeof(packetId), 0);
+    send(bstate->clientSock, &compression, sizeof(compression), 0);
     if (buf == NULL) {
-        bstate->client.write((char*)&size, sizeof(size));
+        send(bstate->clientSock, &size, sizeof(size), 0);
     } else {
         size = buf->pos;
-        bstate->client.write((char*)&size, sizeof(size));
-        bstate->client.write(buf->data, size);
+        send(bstate->clientSock, &size, sizeof(size), 0);
+        send(bstate->clientSock, buf->data, size, 0);
     }
-    bstate->client.flush();
+    //bstate->client.flush();
 
     xSemaphoreGive(bstate->writeLock);
 }
@@ -153,144 +175,144 @@ void banchoTask(void *arg) {
     BanchoConnection *bconn = (BanchoConnection*)arg;
     Serial.println("Got variables");
 
-    if (bconn->client) {
-        Serial.println("Trying to get connection info...");
-        LoginPacket lp = getConnectionInfo(bconn->client);
-        Serial.printf("Username: %s\nPassword: %s\nClient info: %s\n", lp.username, lp.password, lp.clientInfo);
+    Serial.println("Trying to get connection info...");
+    LoginPacket lp = getConnectionInfo(bconn->clientSock);
+    Serial.printf("Username: %s\nPassword: %s\nClient info: %s\n", lp.username, lp.password, lp.clientInfo);
 
-        BanchoState bstate;
-        bstate.client = bconn->client;
-        bstate.writeLock = xSemaphoreCreateMutex();
-        bstate.alive = true;
-        bconn->bstate = &bstate;
+    BanchoState bstate;
+    //bstate.client = bconn->client;
+    bstate.clientSock = bconn->clientSock;
+    bstate.writeLock = xSemaphoreCreateMutex();
+    bstate.alive = true;
+    bconn->bstate = &bstate;
 
-        Serial.println("Verifying login");
-        if (!authenticateChoUser(&bstate, lp.username, lp.password, bconn)) {
-            Serial.println("Authentication failed! Server dropping conenction");
-            bstate.alive = false;
-            bconn->client.stop();
-            bconn->active = false;
-            free(bconn);
-
-            vTaskDelete(NULL);
-        }
-        Serial.println("Authentication successful!");
-        bconn->version = getClientVersion(lp);
-        bconn->username = (char*)malloc(strlen(lp.username) + 1);
-        strncpy(bconn->username, lp.username, strlen(lp.username) + 1);
-
-        // Send channel list to the client
-        for (int i = 0; i < CHANNEL_LIST_AUTOJOIN_LEN; i++) {
-            sendChannelJoin(&bstate, ChannelListAutojoin[i], CHOPKT_CHANNEL_AVAILABLE_AUTOJOIN);
-        }
-        for (int i = 0; i < CHANNEL_LIST_LEN; i++) {
-            sendChannelJoin(&bstate, ChannelList[i], CHOPKT_CHANNEL_AVAILABLE);
-        }
-
-        // Make client join #osu
-        Serial.println("Sending join #osu to client");
-        sendChannelJoin(&bstate, "#osu", CHOPKT_CHANNEL_JOIN_SUCCESS);
-        Serial.println("Sent #osu request");
-
-        // Set own status
-        Serial.println("Setting empty status for current user");
-        setEmptyStatus(bconn);
-
-        // Initial user stats send, for some reason osu! doesn't request them when using "Remember password"
-        Serial.println("Sending stats on login");
-        sendUserStats(&bstate, bconn->userId, bconn->username, bconn->statusUpdate, CHO_STATS_STATISTICS, bconn->version);
-
-        while (bconn->client.connected()) {
-            if (bconn->client.available()) {
-                Buffer buf;
-                CreateBuffer(&buf);
-
-                BanchoHeader h;
-                bconn->client.readBytes((char*)&h.packetId, sizeof(h.packetId));
-                bconn->client.readBytes((char*)&h.compression, sizeof(h.compression));
-                bconn->client.readBytes((char*)&h.size, sizeof(h.size));
-
-                if (h.size >= buf.capacity) {
-                    Serial.println("Received more data than buffer can accept!");
-                    // TODO Handle that case
-                    continue;
-                }
-
-                bconn->client.readBytes(buf.data, h.size);
-
-                switch (h.packetId) {
-                    case CHOPKT_CHANGE_STATUS:
-                        Serial.printf("%d is changing status\n", bconn->userId);
-                        StatusUpdate p;
-                        StatusUpdate_Read(&buf, &p);
-                        bconn->statusUpdate = p;
-                        break;
-                    case CHOPKT_CLIENT_SEND_MESSAGE:
-                        Serial.println("Received message from client");
-                        ChatMessage m;
-                        ChatMessage_Deserialize(&buf, &m);
-                        m.senderId = bconn->userId;
-                        m.sender = bconn->username;
-                        EnqueueMessage(&m);
-                        break;
-                    case CHOPKT_CLIENT_MESSAGE_PRIVATE:
-                        Serial.println("Received private message from client");
-                        ChatMessage pm;
-                        ChatMessage_Deserialize(&buf, &pm);
-                        pm.senderId = bconn->userId;
-                        pm.sender = bconn->username;
-                        pm.privateMessage = true;
-                        EnqueueMessage(&pm);
-                        break;
-                    case CHOPKT_REQUEST_STATUS:
-                        Serial.println("Received RequestStatus");
-                        sendUserStats(&bstate, bconn->userId, bconn->username, bconn->statusUpdate, CHO_STATS_STATISTICS, bconn->version);
-                        break;
-                    case CHOPKT_RECEIVE_UPDATES:
-                        Serial.println("Client wants to receive status updates");
-                        for (int i = 0; i < CHO_MAX_CONNECTIONS; i++) {
-                            BanchoConnection user = connections[i];
-                            if (user.active) {
-                                sendUserStats(&bstate, user.userId, user.username, user.statusUpdate, CHO_STATS_FULL, bconn->version);
-                            }
-                        }
-                        break;
-                    case CHOPKT_CHANNEL_JOIN:
-                        char* channelName;
-                        BufferReadOsuString(&buf, &channelName);
-                        Serial.printf("Received channel join for %s\n", channelName);
-                        /*
-                        * TODO: Maybe add the channel name to the list of channels for the connection
-                            to not send messages to the clients that are not in that specific channel
-                        */
-                        sendChannelJoin(&bstate, channelName, CHOPKT_CHANNEL_JOIN_SUCCESS);
-                        free(channelName);
-                        break;
-                    case CHOPKT_PONG:
-                        break;
-                    default:
-                        Serial.printf("Unknown packet received: %d\n", h.packetId);
-                }
-
-                //if (buf != NULL)
-                BufferFree(&buf);
-            }
-        }
-
-        Serial.println("Dropping connection!");
+    Serial.println("Verifying login");
+    if (!authenticateChoUser(&bstate, lp.username, lp.password, bconn)) {
+        Serial.println("Authentication failed! Server dropping conenction");
         bstate.alive = false;
-        Serial.println("Stopping client");
-        bconn->client.stop();
-        Serial.println("Marking connection as free");
+        close(bconn->clientSock);
         bconn->active = false;
-        Serial.println("Freeing username");
-        free(bconn->username);
-        // Serial.println("Freeing bconn");
-        // free(bconn);
+        free(bconn);
 
-        Serial.println("Exitting task");
         vTaskDelete(NULL);
     }
+    Serial.println("Authentication successful!");
+    bconn->version = getClientVersion(lp);
+    bconn->username = (char*)malloc(strlen(lp.username) + 1);
+    strncpy(bconn->username, lp.username, strlen(lp.username) + 1);
+
+    // Send channel list to the client
+    for (int i = 0; i < CHANNEL_LIST_AUTOJOIN_LEN; i++) {
+        sendChannelJoin(&bstate, ChannelListAutojoin[i], CHOPKT_CHANNEL_AVAILABLE_AUTOJOIN);
+    }
+    for (int i = 0; i < CHANNEL_LIST_LEN; i++) {
+        sendChannelJoin(&bstate, ChannelList[i], CHOPKT_CHANNEL_AVAILABLE);
+    }
+
+    // Make client join #osu
+    Serial.println("Sending join #osu to client");
+    sendChannelJoin(&bstate, "#osu", CHOPKT_CHANNEL_JOIN_SUCCESS);
+    Serial.println("Sent #osu request");
+
+    // Set own status
+    Serial.println("Setting empty status for current user");
+    setEmptyStatus(bconn);
+
+    // Initial user stats send, for some reason osu! doesn't request them when using "Remember password"
+    Serial.println("Sending stats on login");
+    sendUserStats(&bstate, bconn->userId, bconn->username, bconn->statusUpdate, CHO_STATS_STATISTICS, bconn->version);
+
+    while (true) {
+        //if (bconn->client.available()) {
+            Buffer buf;
+            CreateBuffer(&buf);
+
+            BanchoHeader h;
+            recv(bconn->clientSock, &h.packetId, sizeof(h.packetId), 0);
+            recv(bconn->clientSock, &h.compression, sizeof(h.compression), 0);
+            recv(bconn->clientSock, &h.size, sizeof(h.size), 0);
+
+            if (h.size >= buf.capacity) {
+                Serial.println("Received more data than buffer can accept!");
+                // TODO Handle that case
+                //continue;
+                return;
+            }
+
+            recv(bconn->clientSock, buf.data, h.size, 0);
+
+            switch (h.packetId) {
+                case CHOPKT_CHANGE_STATUS:
+                    Serial.printf("%d is changing status\n", bconn->userId);
+                    StatusUpdate p;
+                    StatusUpdate_Read(&buf, &p);
+                    bconn->statusUpdate = p;
+                    break;
+                case CHOPKT_CLIENT_SEND_MESSAGE:
+                    Serial.println("Received message from client");
+                    ChatMessage m;
+                    ChatMessage_Deserialize(&buf, &m);
+                    m.senderId = bconn->userId;
+                    m.sender = bconn->username;
+                    EnqueueMessage(&m);
+                    break;
+                case CHOPKT_CLIENT_MESSAGE_PRIVATE:
+                    Serial.println("Received private message from client");
+                    ChatMessage pm;
+                    ChatMessage_Deserialize(&buf, &pm);
+                    pm.senderId = bconn->userId;
+                    pm.sender = bconn->username;
+                    pm.privateMessage = true;
+                    EnqueueMessage(&pm);
+                    break;
+                case CHOPKT_REQUEST_STATUS:
+                    Serial.println("Received RequestStatus");
+                    sendUserStats(&bstate, bconn->userId, bconn->username, bconn->statusUpdate, CHO_STATS_STATISTICS, bconn->version);
+                    break;
+                case CHOPKT_RECEIVE_UPDATES:
+                    Serial.println("Client wants to receive status updates");
+                    for (int i = 0; i < CHO_MAX_CONNECTIONS; i++) {
+                        BanchoConnection user = connections[i];
+                        if (user.active) {
+                            sendUserStats(&bstate, user.userId, user.username, user.statusUpdate, CHO_STATS_FULL, bconn->version);
+                        }
+                    }
+                    break;
+                case CHOPKT_CHANNEL_JOIN:
+                    char* channelName;
+                    BufferReadOsuString(&buf, &channelName);
+                    Serial.printf("Received channel join for %s\n", channelName);
+                    /*
+                    * TODO: Maybe add the channel name to the list of channels for the connection
+                        to not send messages to the clients that are not in that specific channel
+                    */
+                    sendChannelJoin(&bstate, channelName, CHOPKT_CHANNEL_JOIN_SUCCESS);
+                    free(channelName);
+                    break;
+                case CHOPKT_PONG:
+                    break;
+                default:
+                    Serial.printf("Unknown packet received: %d\n", h.packetId);
+            }
+
+            //if (buf != NULL)
+            BufferFree(&buf);
+        //}
+    }
+
+    Serial.println("Dropping connection!");
+    bstate.alive = false;
+    Serial.println("Stopping client");
+    close(bconn->clientSock);
+    Serial.println("Marking connection as free");
+    bconn->active = false;
+    Serial.println("Freeing username");
+    free(bconn->username);
+    // Serial.println("Freeing bconn");
+    // free(bconn);
+
+    Serial.println("Exitting task");
+    vTaskDelete(NULL);
 }
 /*
 * Gets BanchoConnection by the name
@@ -299,7 +321,7 @@ BanchoConnection* GetClientByName(char *name) {
     for (int i = 0; i < CHO_MAX_CONNECTIONS; i++) {
         BanchoConnection *user = &connections[i];
         // TODO: Use safe strncmp
-        if (user->client.connected() && strcmp(name, user->username) == 0) {
+        if (user->active && strcmp(name, user->username) == 0) {
             return &connections[i];
         }
     }

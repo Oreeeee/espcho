@@ -43,7 +43,7 @@ void ChatLoop(void *args) {
             for (int i = 0; i < CHO_MAX_CONNECTIONS; i++) {
                 bconn = &connections[i];
                 // Send messages only to relevant clients
-                if (bconn->client.connected() && bconn->userId != msg->senderId) {
+                if (bconn->active && bconn->userId != msg->senderId) {
                     SendMessage(msg, bconn);
                 }
             }

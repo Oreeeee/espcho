@@ -2,7 +2,6 @@
 #define USERSTATS_H
 
 #include <stdint.h>
-#include <WiFi.h>
 #include "datatypes/StatusUpdate.h"
 #include "BanchoState.h"
 

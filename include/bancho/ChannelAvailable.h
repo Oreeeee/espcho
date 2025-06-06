@@ -1,7 +1,6 @@
 #ifndef CHANNELAVAILABLEAUTOJOIN_H
 #define CHANNELAVAILABLEAUTOJOIN_H
 
-#include <WiFi.h>
 #include "BanchoState.h"
 
 typedef struct {

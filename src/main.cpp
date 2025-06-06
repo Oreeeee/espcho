@@ -1,7 +1,4 @@
 #include <Arduino.h>
-#include <WiFi.h>
-#include <WiFiServer.h>
-#include <WiFiClient.h>
 #include "config.h"
 #include "BanchoServer.h"
 #include "Globals.h"

@@ -2,7 +2,6 @@
 #include "constants.h"
 #include "BanchoState.h"
 #include "datatypes/StatusUpdate.h"
-#include <WiFi.h>
 
 #include "serialization/Buffer.h"
 #include "serialization/Writers.h"

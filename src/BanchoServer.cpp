@@ -221,13 +221,16 @@ void banchoTask(void *arg) {
     Serial.println("Sending stats on login");
     sendUserStats(&bstate, bconn->userId, bconn->username, bconn->statusUpdate, CHO_STATS_STATISTICS, bconn->version);
 
-    while (true) {
+    while (bconn->active) {
         //if (bconn->client.available()) {
             Buffer buf;
             CreateBuffer(&buf);
 
             BanchoHeader h;
-            recv(bconn->clientSock, &h.packetId, sizeof(h.packetId), 0);
+            ssize_t idRecvSize = recv(bconn->clientSock, &h.packetId, sizeof(h.packetId), 0);
+            if (idRecvSize <= 0) {
+                bconn->active = false;
+            }
             recv(bconn->clientSock, &h.compression, sizeof(h.compression), 0);
             recv(bconn->clientSock, &h.size, sizeof(h.size), 0);
 

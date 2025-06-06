@@ -250,6 +250,9 @@ void banchoTask(void *arg) {
                     StatusUpdate_Read(&buf, &p);
                     bconn->statusUpdate = p;
                     break;
+                case CHOPKT_CLIENT_EXIT:
+                    bconn->active = false;
+                    break;
                 case CHOPKT_CLIENT_SEND_MESSAGE:
                     Serial.println("Received message from client");
                     ChatMessage m;

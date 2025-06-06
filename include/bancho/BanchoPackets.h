@@ -6,6 +6,7 @@
 // Don't let the UserStats incident happen again
 #define CHOPKT_CHANGE_STATUS 0
 #define CHOPKT_CLIENT_SEND_MESSAGE 1
+#define CHOPKT_CLIENT_EXIT 2
 #define CHOPKT_REQUEST_STATUS 3
 #define CHOPKT_PONG 4
 #define CHOPKT_LOGINREPLY 5

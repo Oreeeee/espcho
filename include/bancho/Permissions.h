@@ -1,0 +1,12 @@
+#ifndef PERMISSIONS_H
+#define PERMISSIONS_H
+
+enum Permissions {
+    PERM_NONE = 0,
+    PERM_NORMAL = 1,
+    PERM_BAT = 2,
+    PERM_SUPPORTER = 4,
+    PERM_ALL = PERM_NONE | PERM_NORMAL | PERM_BAT | PERM_SUPPORTER,
+};
+
+#endif //PERMISSIONS_H

@@ -10,6 +10,7 @@
 #include "BanchoState.h"
 #include "Globals.h"
 #include "bancho/ChatMessage.h"
+#include "bancho/Permissions.h"
 #include "chat/ChatManager.h"
 #include "serialization/Buffer.h"
 #include "serialization/Readers.h"
@@ -99,6 +100,7 @@ void sendUserStats(BanchoState *bstate, uint32_t userId, char *username, StatusU
 
     if (completness == CHO_STATS_FULL) {
         p.username = (char*)calloc(strlen(username) + 1, sizeof(char));
+        p.permissions = PERM_ALL;
         strncpy(p.username, username, strlen(username));
         p.avatarFilename = (char*)calloc(2, sizeof(char));
         p.avatarFilename[0] = ' ';
@@ -225,6 +227,13 @@ void banchoTask(void *arg) {
     // Initial user stats send, for some reason osu! doesn't request them when using "Remember password"
     Serial.println("Sending stats on login");
     sendUserStats(&bstate, bconn->userId, bconn->username, bconn->statusUpdate, CHO_STATS_STATISTICS, bconn->version);
+
+    Serial.println("Sending permissions");
+    Buffer permBuf;
+    CreateBuffer(&permBuf);
+    BufferWriteU32(&permBuf, PERM_ALL);
+    SendBanchoPacket(&bstate, CHOPKT_USER_PERMISSIONS, &permBuf);
+    free(permBuf.data);
 
     while (bconn->active) {
         //if (bconn->client.available()) {

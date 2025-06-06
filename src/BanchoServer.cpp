@@ -27,6 +27,7 @@ ssize_t recv_until(int sock, char terminator, char *buffer, size_t maxlen) {
 
         buffer[i++] = c;
         if (c == terminator) {
+            buffer[--i] = '\0'; // Do not include a terminator in there
             break;
         }
     }

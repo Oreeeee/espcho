@@ -97,11 +97,12 @@ void sendUserStats(BanchoState *bstate, uint32_t userId, char *username, StatusU
     }
 
     if (completness == CHO_STATS_FULL) {
-        p.username = (char*)malloc(strlen(username) + 1);
-        strncpy(p.username, username, strlen(username) + 1);
+        p.username = (char*)calloc(strlen(username) + 1, sizeof(char));
+        strncpy(p.username, username, strlen(username));
         p.avatarFilename = (char*)calloc(2, sizeof(char));
         p.avatarFilename[0] = ' ';
         p.city = "peppy's hidden bunker";
+        p.timezone = 0;
     }
 
     Buffer buf;

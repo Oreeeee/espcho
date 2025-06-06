@@ -115,36 +115,4 @@ void loop() {
     &bconn.task
     );
   Serial.println("Started Bancho task");
-  // close(clientSock);
-  // if (client) {
-  //   Serial.printf("Accepted connection from %s:%d\n", client.remoteIP().toString(), client.remotePort());
-  //   Serial.println("Trying to start Bancho task");
-  //
-  //   int freeConnIndex = getFreeConnectionIndex();
-  //
-  //   if (freeConnIndex == -1) {
-  //     Serial.println("No free connection slots left, dropping connection");
-  //     client.stop();
-  //     return;
-  //   }
-  //
-  //   BanchoConnection bconn;
-  //   bconn.client = client;
-  //   bconn.index = freeConnIndex;
-  //   bconn.active = true;
-  //
-  //   connections[freeConnIndex] = bconn;
-  //
-  //   Serial.println("Starting Bancho task");
-  //   xTaskCreate(
-  //     banchoTask,
-  //     "Bancho",
-  //     4096,
-  //     &connections[freeConnIndex],
-  //     1,
-  //     &bconn.task
-  //   );
-  //   Serial.println("Started Bancho task");
-  // }
-  //httpServer.handleClient();
 }

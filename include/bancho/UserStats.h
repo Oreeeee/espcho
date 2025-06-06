@@ -34,5 +34,6 @@ typedef struct {
 } UserStats;
 
 void UserStats_Write(const UserStats &p, BanchoState *bstate, Buffer* buf, const uint16_t version);
+void UserStats_Free(UserStats *p);
 
 #endif

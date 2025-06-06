@@ -7,4 +7,6 @@ typedef struct {
     char *clientInfo;
 } LoginPacket;
 
+void LoginPacket_Free(LoginPacket *lp);
+
 #endif

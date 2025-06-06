@@ -32,3 +32,9 @@ void UserStats_Write(const UserStats &p, BanchoState *bstate, Buffer* buf, const
         }
     }
 }
+
+void UserStats_Free(UserStats *p) {
+    free(p->username);
+    free(p->avatarFilename);
+    free(p->city);
+}

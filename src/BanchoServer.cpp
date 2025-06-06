@@ -111,6 +111,7 @@ void sendUserStats(BanchoState *bstate, uint32_t userId, char *username, StatusU
 
     UserStats_Write(p, bstate, &buf, version);
     SendBanchoPacket(bstate, CHOPKT_USER_STATS, &buf);
+    //UserStats_Free(&p); // TODO
 }
 
 void sendChannelJoin(BanchoState *bstate, const char *channelName, int packetType) {
@@ -201,6 +202,8 @@ void banchoTask(void *arg) {
     bconn->version = getClientVersion(lp);
     bconn->username = (char*)malloc(strlen(lp.username) + 1);
     strncpy(bconn->username, lp.username, strlen(lp.username) + 1);
+
+    LoginPacket_Free(&lp);
 
     // Send channel list to the client
     for (int i = 0; i < CHANNEL_LIST_AUTOJOIN_LEN; i++) {
@@ -315,6 +318,8 @@ void banchoTask(void *arg) {
     bconn->active = false;
     Serial.println("Freeing username");
     free(bconn->username);
+    Serial.println("Freeing status");
+    StatusUpdate_Free(&bconn->statusUpdate);
     // Serial.println("Freeing bconn");
     // free(bconn);
 

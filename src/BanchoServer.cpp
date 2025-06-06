@@ -1,5 +1,4 @@
 #include <Arduino.h>
-#include <WiFi.h>
 #include <lwip/sockets.h>
 
 #include "config.h"
@@ -35,7 +34,7 @@ ssize_t recv_until(int sock, char terminator, char *buffer, size_t maxlen) {
     return i;
 }
 
-LoginPacket getConnectionInfo(WiFiClient client) {
+LoginPacket getConnectionInfo(int clientSock) {
     LoginPacket lp;
 
     lp.username = (char*)calloc(CHO_MAX_LOGIN_STR, sizeof(char));
@@ -43,12 +42,12 @@ LoginPacket getConnectionInfo(WiFiClient client) {
     lp.clientInfo = (char*)calloc(CHO_MAX_LOGIN_STR, sizeof(char));
     char dummy;
 
-    recv_until(client, '\r', lp.username, CHO_MAX_LOGIN_STR);
-    recv(client, &dummy, 1, 0); // \n
-    recv_until(client, '\r', lp.password, CHO_MAX_LOGIN_STR);
-    recv(client, &dummy, 1, 0); // \n
-    recv_until(client, '\r', lp.clientInfo, CHO_MAX_LOGIN_STR);
-    recv(client, &dummy, 1, 0); // \n
+    recv_until(clientSock, '\r', lp.username, CHO_MAX_LOGIN_STR);
+    recv(clientSock, &dummy, 1, 0); // \n
+    recv_until(clientSock, '\r', lp.password, CHO_MAX_LOGIN_STR);
+    recv(clientSock, &dummy, 1, 0); // \n
+    recv_until(clientSock, '\r', lp.clientInfo, CHO_MAX_LOGIN_STR);
+    recv(clientSock, &dummy, 1, 0); // \n
     
     return lp;
 }

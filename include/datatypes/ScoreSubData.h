@@ -25,6 +25,6 @@ typedef struct {
 } ScoreSubData;
 
 ScoreSubData ParseScoreString(char *in);
-void FreeScoreSubData(ScoreSubData s);
+void FreeScoreSubData(ScoreSubData *s);
 
 #endif

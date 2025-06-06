@@ -94,9 +94,9 @@ ScoreSubData ParseScoreString(char *in) {
 }
 
 // Free all the strings in ScoreSubData
-void FreeScoreSubData(ScoreSubData s) {
-    free(s.fileChecksum);
-    free(s.username);
-    free(s.onlineScoreChecksum);
-    free(s.ranking);
+void FreeScoreSubData(ScoreSubData *s) {
+    free(s->fileChecksum);
+    free(s->username);
+    free(s->onlineScoreChecksum);
+    free(s->ranking);
 }

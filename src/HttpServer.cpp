@@ -74,6 +74,13 @@ httpd_uri_t uri_direct_search = {
     .user_ctx = NULL
 };
 
+httpd_uri_t uri_direct_download = {
+    .uri = "/d/*",
+    .method = HTTP_GET,
+    .handler = directDownloadHandler,
+    .user_ctx = NULL
+};
+
 esp_err_t scoreSubHandler(httpd_req_t *req) {
     Serial.println("[HTTP] POST /web/osu-submit-modular.php");
 
@@ -199,16 +206,101 @@ esp_err_t directSearchHandler(httpd_req_t *req) {
     return ESP_OK;
 }
 
+esp_err_t directDownloadHandler(httpd_req_t *req) {
+    Serial.printf("[HTTP] GET %s\n", req->uri);
+
+    const char *filename = req->uri + 3; // offset by lenght of /b/
+    char *end;
+    const int beatmapId = strtol(filename, &end, 10);
+    if (beatmapId <= 0) {
+        Serial.printf("[HTTP] Invalid beatmap ID (%d)\n", beatmapId);
+        httpd_resp_send_404(req);
+        return ESP_FAIL;
+    }
+    Serial.printf("[HTTP] Downloading beatmap %d to client\n", beatmapId);
+
+    // Proxy the beatmap download to catboy.best
+    char targetRequest[64];
+    snprintf(targetRequest, sizeof(targetRequest), "https://catboy.best/d/%d", beatmapId);
+    Serial.printf("[HTTP] Sending request to %s\n", targetRequest);
+
+    esp_http_client_config_t config = {};
+    config.method = HTTP_METHOD_GET;
+    config.url = targetRequest;
+    config.cert_pem = mirrorCaPem;
+
+    esp_http_client_handle_t client = esp_http_client_init(&config);
+
+    esp_err_t openErr = esp_http_client_open(client, 0);
+    if (openErr != ESP_OK) {
+        Serial.printf("[HTTP] Failed to send request: %s\n", esp_err_to_name(openErr));
+        esp_http_client_cleanup(client);
+        httpd_resp_send_500(req);
+        return openErr;
+    }
+
+    int wlen = esp_http_client_write(client, NULL, 0);
+    Serial.printf("[HTTP] Wrote %d bytes in request\n", wlen);
+
+    int contentLength = esp_http_client_fetch_headers(client);
+    int statusCode = esp_http_client_get_status_code(client);
+    Serial.printf("[HTTP] Got response with code %d and Content Length of %d\n", statusCode, contentLength);
+    if (statusCode != 200) {
+        Serial.println("[HTTP] Status code is not 200");
+        httpd_resp_send_500(req);
+        return ESP_FAIL;
+    }
+
+    char contentLengthStr[16];
+    snprintf(contentLengthStr, sizeof(contentLengthStr), "%d", contentLength);
+    httpd_resp_set_hdr(req, "Transfer-Encoding", "chunked");
+    httpd_resp_set_type(req, "application/octet-stream");
+    httpd_resp_set_hdr(req, "Content-Length", contentLengthStr);
+
+    const int chunkSize = 8096;
+    char *buf = (char*)calloc(chunkSize, sizeof(char));
+    int readLen;
+
+    Serial.println("[HTTP] Streaming the response to the client");
+
+    // Stream back the response back to the client
+    while ((readLen = esp_http_client_read(client, buf, chunkSize)) > 0) {
+        //Serial.printf("[HTTP] Sending chunk with size of %d\n", readLen);
+        esp_err_t err = httpd_resp_send_chunk(req, buf, readLen);
+        if (err != ESP_OK) {
+            esp_http_client_close(client);
+            esp_http_client_cleanup(client);
+            Serial.println("[HTTP] Failed to send chunk");
+            return err;
+        }
+    }
+
+    httpd_resp_send_chunk(req, NULL, 0); // final chunk
+    free(buf);
+    buf = NULL;
+
+    Serial.println("[HTTP] Response streamed back");
+
+    esp_http_client_close(client);
+    esp_http_client_cleanup(client);
+
+    Serial.println("[HTTP] Finished sending beatmap data");
+
+    return ESP_OK;
+}
+
 httpd_handle_t initHttpServer_c() {
     Serial.println("Starting HTTP server on port 80...");
 
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.stack_size = 8196; // TODO: should this be lowered?
+    config.uri_match_fn = httpd_uri_match_wildcard;
     httpServerC = NULL;
 
     if (httpd_start(&httpServerC, &config) == ESP_OK) {
-        httpd_register_uri_handler(httpServerC, &uri_score_sub);
-        httpd_register_uri_handler(httpServerC, &uri_direct_search);
+        Serial.printf("[HTTP] Registering handler status: %d\n", httpd_register_uri_handler(httpServerC, &uri_score_sub));
+        Serial.printf("[HTTP] Registering handler status: %d\n", httpd_register_uri_handler(httpServerC, &uri_direct_search));
+        Serial.printf("[HTTP] Registering handler status: %d\n", httpd_register_uri_handler(httpServerC, &uri_direct_download));
     }
 
     Serial.println("HTTP Server started on port 80");

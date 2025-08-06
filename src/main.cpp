@@ -3,7 +3,7 @@
 #include "BanchoServer.h"
 #include "Globals.h"
 #include "ThreadingUtils.h"
-#include "HttpServer.h"
+#include "http/HttpServer.h"
 #include <lwip/sockets.h>
 
 #ifdef CHO_DISABLE_BROWNOUT

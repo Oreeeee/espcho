@@ -1,4 +1,3 @@
-#include <Arduino.h>
 #include <lwip/sockets.h>
 
 #include "config.h"
@@ -15,6 +14,10 @@
 #include "serialization/Buffer.h"
 #include "serialization/Readers.h"
 #include "serialization/Writers.h"
+
+#define LOG_LOCAL_LEVEL ESP_LOG_DEBUG
+#include "esp_log.h"
+static const char* TAG = "BanchoServer";
 
 ssize_t recv_until(int sock, char terminator, char *buffer, size_t maxlen) {
     size_t i = 0;
@@ -57,10 +60,10 @@ LoginPacket getConnectionInfo(int clientSock) {
 int getClientVersion(LoginPacket lp) {
     int version;
     if (sscanf(lp.clientInfo, "b%d", &version) != 1) {
-        Serial.println("Failed to get client's version! Assuming b1596");
+        ESP_LOGE(TAG, "Failed to get client's version! Assuming b1596");
         return 1596;
     }
-    Serial.printf("Got client's version: b%d\n", version);
+    ESP_LOGD(TAG, "Got client's version: b%d", version);
     return version;
 }
 
@@ -111,7 +114,7 @@ void sendUserStats(BanchoState *bstate, uint32_t userId, char *username, StatusU
     Buffer buf;
     CreateBuffer(&buf);
 
-    UserStats_Write(p, bstate, &buf, version);
+    UserStats_Write(&p, bstate, &buf, version);
     SendBanchoPacket(bstate, CHOPKT_USER_STATS, &buf);
     //UserStats_Free(&p); // TODO
 }
@@ -124,7 +127,7 @@ void sendChannelJoin(BanchoState *bstate, const char *channelName, int packetTyp
         case CHOPKT_CHANNEL_JOIN_SUCCESS:
             break;
         default:
-            Serial.println("Attempted to use wrong type for sendChannelJoin()!");
+            ESP_LOGE(TAG, "Attempted to use wrong type for sendChannelJoin()!");
             return;
     }
 
@@ -175,13 +178,11 @@ void setEmptyStatus(BanchoConnection *bconn) {
 }
 
 void banchoTask(void *arg) {
-    Serial.println("Hello from task");
     BanchoConnection *bconn = (BanchoConnection*)arg;
-    Serial.println("Got variables");
 
-    Serial.println("Trying to get connection info...");
+    ESP_LOGD(TAG, "Trying to get connection info...");
     LoginPacket lp = getConnectionInfo(bconn->clientSock);
-    Serial.printf("Username: %s\nPassword: %s\nClient info: %s\n", lp.username, lp.password, lp.clientInfo);
+    ESP_LOGD(TAG, "Username: %s\nPassword: %s\nClient info: %s", lp.username, lp.password, lp.clientInfo);
 
     BanchoState bstate;
     //bstate.client = bconn->client;
@@ -190,9 +191,9 @@ void banchoTask(void *arg) {
     bstate.alive = true;
     bconn->bstate = &bstate;
 
-    Serial.println("Verifying login");
+    ESP_LOGD(TAG, "Verifying login");
     if (!authenticateChoUser(&bstate, lp.username, lp.password, bconn)) {
-        Serial.println("Authentication failed! Server dropping conenction");
+        ESP_LOGI(TAG, "Authentication failed! Server dropping conenction");
         bstate.alive = false;
         close(bconn->clientSock);
         bconn->active = false;
@@ -200,7 +201,7 @@ void banchoTask(void *arg) {
 
         vTaskDelete(NULL);
     }
-    Serial.println("Authentication successful!");
+    ESP_LOGI(TAG, "Authentication successful!");
     bconn->version = getClientVersion(lp);
     bconn->username = (char*)malloc(strlen(lp.username) + 1);
     strncpy(bconn->username, lp.username, strlen(lp.username) + 1);
@@ -216,19 +217,19 @@ void banchoTask(void *arg) {
     }
 
     // Make client join #osu
-    Serial.println("Sending join #osu to client");
+    ESP_LOGD(TAG, "Sending join #osu to client");
     sendChannelJoin(&bstate, "#osu", CHOPKT_CHANNEL_JOIN_SUCCESS);
-    Serial.println("Sent #osu request");
+    ESP_LOGD(TAG, "Sent #osu request");
 
     // Set own status
-    Serial.println("Setting empty status for current user");
+    ESP_LOGD(TAG, "Setting empty status for current user");
     setEmptyStatus(bconn);
 
     // Initial user stats send, for some reason osu! doesn't request them when using "Remember password"
-    Serial.println("Sending stats on login");
+    ESP_LOGD(TAG, "Sending stats on login");
     sendUserStats(&bstate, bconn->userId, bconn->username, bconn->statusUpdate, CHO_STATS_STATISTICS, bconn->version);
 
-    Serial.println("Sending permissions");
+    ESP_LOGD(TAG, "Sending permissions");
     Buffer permBuf;
     CreateBuffer(&permBuf);
     BufferWriteU32(&permBuf, PERM_ALL);
@@ -249,7 +250,7 @@ void banchoTask(void *arg) {
             recv(bconn->clientSock, &h.size, sizeof(h.size), 0);
 
             if (h.size >= buf.capacity) {
-                Serial.println("Received more data than buffer can accept!");
+                ESP_LOGW(TAG, "Received more data than buffer can accept!");
                 // TODO Handle that case
                 //continue;
                 return;
@@ -259,7 +260,7 @@ void banchoTask(void *arg) {
 
             switch (h.packetId) {
                 case CHOPKT_CHANGE_STATUS:
-                    Serial.printf("%d is changing status\n", bconn->userId);
+                    ESP_LOGI(TAG, "%d is changing status", bconn->userId);
                     StatusUpdate p;
                     StatusUpdate_Read(&buf, &p);
                     bconn->statusUpdate = p;
@@ -268,7 +269,7 @@ void banchoTask(void *arg) {
                     bconn->active = false;
                     break;
                 case CHOPKT_CLIENT_SEND_MESSAGE:
-                    Serial.println("Received message from client");
+                    ESP_LOGI(TAG, "Received message from client");
                     ChatMessage m;
                     ChatMessage_Deserialize(&buf, &m);
                     m.senderId = bconn->userId;
@@ -276,7 +277,7 @@ void banchoTask(void *arg) {
                     EnqueueMessage(&m);
                     break;
                 case CHOPKT_CLIENT_MESSAGE_PRIVATE:
-                    Serial.println("Received private message from client");
+                    ESP_LOGI(TAG, "Received private message from client");
                     ChatMessage pm;
                     ChatMessage_Deserialize(&buf, &pm);
                     pm.senderId = bconn->userId;
@@ -285,11 +286,11 @@ void banchoTask(void *arg) {
                     EnqueueMessage(&pm);
                     break;
                 case CHOPKT_REQUEST_STATUS:
-                    Serial.println("Received RequestStatus");
+                    ESP_LOGI(TAG, "Received RequestStatus");
                     sendUserStats(&bstate, bconn->userId, bconn->username, bconn->statusUpdate, CHO_STATS_STATISTICS, bconn->version);
                     break;
                 case CHOPKT_RECEIVE_UPDATES:
-                    Serial.println("Client wants to receive status updates");
+                    ESP_LOGI(TAG, "Client wants to receive status updates");
                     for (int i = 0; i < CHO_MAX_CONNECTIONS; i++) {
                         BanchoConnection user = connections[i];
                         if (user.active) {
@@ -300,7 +301,7 @@ void banchoTask(void *arg) {
                 case CHOPKT_CHANNEL_JOIN:
                     char* channelName;
                     BufferReadOsuString(&buf, &channelName);
-                    Serial.printf("Received channel join for %s\n", channelName);
+                    ESP_LOGI(TAG, "Received channel join for %s\n", channelName);
                     /*
                     * TODO: Maybe add the channel name to the list of channels for the connection
                         to not send messages to the clients that are not in that specific channel
@@ -311,7 +312,7 @@ void banchoTask(void *arg) {
                 case CHOPKT_PONG:
                     break;
                 default:
-                    Serial.printf("Unknown packet received: %d\n", h.packetId);
+                    ESP_LOGE(TAG, "Unknown packet received: %d", h.packetId);
             }
 
             //if (buf != NULL)
@@ -319,20 +320,20 @@ void banchoTask(void *arg) {
         //}
     }
 
-    Serial.println("Dropping connection!");
+    ESP_LOGI(TAG, "Dropping connection!");
     bstate.alive = false;
-    Serial.println("Stopping client");
+    ESP_LOGI(TAG, "Stopping client");
     close(bconn->clientSock);
-    Serial.println("Marking connection as free");
+    ESP_LOGI(TAG, "Marking connection as free");
     bconn->active = false;
-    Serial.println("Freeing username");
+    ESP_LOGI(TAG, "Freeing username");
     free(bconn->username);
-    Serial.println("Freeing status");
+    ESP_LOGI(TAG, "Freeing status");
     StatusUpdate_Free(&bconn->statusUpdate);
     // Serial.println("Freeing bconn");
     // free(bconn);
 
-    Serial.println("Exitting task");
+    ESP_LOGI(TAG, "Exitting task");
     vTaskDelete(NULL);
 }
 /*

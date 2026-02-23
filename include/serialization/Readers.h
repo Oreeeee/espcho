@@ -3,6 +3,8 @@
 
 #include "Buffer.h"
 #include <stddef.h>
+#include <stdint.h>
+#include <stdbool.h>
 
 int BufferReadFloat(Buffer* buf, float* dest);
 

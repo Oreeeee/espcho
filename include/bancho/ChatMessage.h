@@ -2,6 +2,7 @@
 #define CHATMESSAGE_H
 
 #include "serialization/Buffer.h"
+#include <stdbool.h>
 
 typedef struct {
     char* sender;

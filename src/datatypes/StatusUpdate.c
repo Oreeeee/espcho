@@ -1,20 +1,19 @@
 #include "datatypes/StatusUpdate.h"
 #include <string.h>
-#include <Arduino.h>
 
 #include "serialization/Buffer.h"
 #include "serialization/Readers.h"
 #include "serialization/Writers.h"
 
-void StatusUpdate_Write(const StatusUpdate &p, Buffer* buf) {
-    BufferWriteU8(buf, p.status);
-    BufferWriteU8(buf, p.beatmapUpdate);
-    if (p.beatmapUpdate) {
-        BufferWriteOsuString(buf, p.statusText);
-        BufferWriteOsuString(buf, p.beatmapMD5);
-        BufferWriteU16(buf, p.mods);
-        BufferWriteU8(buf, p.mode);
-        BufferWriteS32(buf, p.beatmapID);
+void StatusUpdate_Write(const StatusUpdate *p, Buffer* buf) {
+    BufferWriteU8(buf, p->status);
+    BufferWriteU8(buf, p->beatmapUpdate);
+    if (p->beatmapUpdate) {
+        BufferWriteOsuString(buf, p->statusText);
+        BufferWriteOsuString(buf, p->beatmapMD5);
+        BufferWriteU16(buf, p->mods);
+        BufferWriteU8(buf, p->mode);
+        BufferWriteS32(buf, p->beatmapID);
     }
 }
 

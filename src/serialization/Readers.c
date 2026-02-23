@@ -1,9 +1,8 @@
 #include "serialization/Readers.h"
-
-#include <cstring>
-#include <HardwareSerial.h>
+#include <string.h>
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
 
 int BufferReadFloat(Buffer* buf, float* dest) {
     if (buf->pos + 4 > buf->capacity) return -1;

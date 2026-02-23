@@ -1,7 +1,6 @@
 #include "bancho/ChatMessage.h"
 
-#include <cstdlib>
-#include <HardwareSerial.h>
+#include <stdlib.h>
 
 #include "serialization/Buffer.h"
 #include "serialization/Readers.h"

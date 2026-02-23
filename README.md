@@ -12,6 +12,3 @@ I haven't been working on this project for some time due to being unable to get 
 ## Screenshots
 ![b1183 and b1719 clients on the main menu](screenshots/screenshot1.png)
 ![b1183 and b1719 clients with the extended chat menu open](screenshots/screenshot2.png)
-
-## Code style
-Please avoid C++ style code as much as possible and stick to C. When you have to use C++, don't use modern features.

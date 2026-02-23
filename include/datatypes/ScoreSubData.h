@@ -2,6 +2,7 @@
 #define SCORE_SUB_DATA_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 typedef struct {
     char *fileChecksum;

@@ -1,24 +1,26 @@
 #include "../../include/http/scoring.h"
-
-#include <HardwareSerial.h>
 #include "datatypes/ScoreSubData.h"
 
+#define LOG_LOCAL_LEVEL ESP_LOG_DEBUG
+#include "esp_log.h"
+static const char *TAG = "Scoring";
+
 esp_err_t scoreSubHandler(httpd_req_t *req) {
-    Serial.println("[HTTP] POST /web/osu-submit-modular.php");
+    ESP_LOGI(TAG, "POST /web/osu-submit-modular.php");
 
     char query[1024];
     char value[512];
 
     if (httpd_req_get_url_query_str(req, query, sizeof(query)) != ESP_OK) {
-        Serial.println("[HTTP] Query string empty");
+        ESP_LOGW(TAG, "Query string empty");
         httpd_resp_send(req, "error: ban", HTTPD_RESP_USE_STRLEN);
         return ESP_FAIL;
     }
 
     if (httpd_query_key_value(query, "pass", value, sizeof(value)) == ESP_OK) {
-        Serial.printf("[HTTP] Got pass: %s\n", value);
+        ESP_LOGD(TAG, "Got pass: %s", value);
     } else {
-        Serial.println("[HTTP] No pass data");
+        ESP_LOGW(TAG, "No pass data");
         httpd_resp_send(req, "error: pass", HTTPD_RESP_USE_STRLEN);
         return ESP_FAIL;
     }
@@ -26,14 +28,14 @@ esp_err_t scoreSubHandler(httpd_req_t *req) {
     strcpy(value, ""); // Ensure that query buffer is empty
 
     if (httpd_query_key_value(query, "score", value, sizeof(value)) == ESP_OK) {
-        Serial.printf("[HTTP] Got score data: %s\n", value);
+        ESP_LOGI(TAG, "Got score data: %s", value);
 
-        Serial.println("Parsing score...");
+        ESP_LOGD(TAG, "Parsing score...");
         ScoreSubData s = ParseScoreString(value);
-        Serial.printf("Score submitted by %s\n", s.username);
+        ESP_LOGI(TAG, "Score submitted by %s", s.username);
         FreeScoreSubData(&s);
     } else {
-        Serial.println("[HTTP] No score data");
+        ESP_LOGW(TAG, "No score data");
         httpd_resp_send(req, "error: ban", HTTPD_RESP_USE_STRLEN);
         return ESP_FAIL;
     }

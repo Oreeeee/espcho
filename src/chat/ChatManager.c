@@ -1,11 +1,14 @@
 #include "chat/ChatManager.h"
 #include <freertos/FreeRTOS.h>
-#include <Arduino.h>
 
 #include "BanchoServer.h"
 #include "config.h"
 #include "Globals.h"
 #include "bancho/BanchoPackets.h"
+
+#define LOG_LOCAL_LEVEL ESP_LOG_DEBUG
+#include "esp_log.h"
+static const char* TAG = "ChatManager";
 
 QueueHandle_t ChatQueue = NULL;
 
@@ -20,7 +23,7 @@ void ChatLoop(void *args) {
     while (true) {
         ChatMessage *msg;
         xQueueReceive(ChatQueue, &msg, portMAX_DELAY);
-        Serial.printf("Received message inside loop: %s\n", msg->message);
+        ESP_LOGI(TAG, "Received message inside loop: %s", msg->message);
 
         // Make a copy of the username to not free the actual pointer
         size_t usernameSize = strlen(msg->sender);
@@ -34,7 +37,7 @@ void ChatLoop(void *args) {
             // Private message, send only to one specific client
             bconn = GetClientByName(msg->target);
             if (bconn == NULL) {
-                Serial.println("Cannot find target to send a private message");
+                ESP_LOGE(TAG, "Cannot find target to send a private message");
             } else {
                 SendMessage(msg, bconn);
             }

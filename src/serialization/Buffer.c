@@ -1,7 +1,5 @@
 #include "serialization/Buffer.h"
-
-#include <cstdlib>
-
+#include <stdlib.h>
 #include "constants.h"
 
 void CreateBuffer(Buffer *buf) {

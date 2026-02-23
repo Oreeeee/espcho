@@ -1,6 +1,7 @@
 #include "datatypes/ScoreSubData.h"
 #include "datatypes/StringBool.h"
-#include <Arduino.h>
+#include <string.h>
+#include <stdlib.h>
 
 ScoreSubData ParseScoreString(char *in) {
     ScoreSubData s;

@@ -6,8 +6,12 @@ Experimental osu! server for 2010 clients, running on ESP32. It's designed for t
 ## Status
 This server is very experimental, it will probably never be production ready (why would you run a production server on a microcontroller anyways?)
 
-## Hiatus
-I haven't been working on this project for some time due to being unable to get the SD card module to work with the ESP32. However when I fix this issue, I will return to this.
+## osu!Direct
+This implementation implements osu!Direct by forwarding requests to Mino (catboy.best).
+
+There are a few caveats though, like response from Mino not matching what b1596 expects, but simple searches do work.
+
+Due to forced HTTPS on catboy.best domain and ESP32 not having up-to-date root certificates, you have to disable TLS certificates at your own risk by enabling `CONFIG_ESP_TLS_INSECURE` and `CONFIG_ESP_TLS_SKIP_SERVER_CERT_VERIFY` in your board's menuconfig.
 
 ## Screenshots
 ![b1183 and b1719 clients on the main menu](screenshots/screenshot1.png)

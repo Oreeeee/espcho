@@ -16,3 +16,9 @@ Due to forced HTTPS on catboy.best domain and ESP32 not having up-to-date root c
 ## Screenshots
 ![b1183 and b1719 clients on the main menu](screenshots/screenshot1.png)
 ![b1183 and b1719 clients with the extended chat menu open](screenshots/screenshot2.png)
+
+## Useful resources
+These projects were extremely helpful when making espcho!
+ - [Lekuruu/chio.py](https://github.com/Lekuruu/chio.py) - in-depth implementation of every Bancho packet for every osu! version
+ - [Lekuruu/bancho-documentation](https://github.com/Lekuruu/bancho-documentation/wiki) - some technical information about the Bancho protocol
+ - [osuTitanic/deck](https://github.com/osuTitanic/deck) - implementation of client API (`/web/` endpoints) for every osu! version

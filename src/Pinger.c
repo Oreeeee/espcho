@@ -17,6 +17,7 @@ void PingClient(void *arg) {
         vTaskDelay(pdMS_TO_TICKS(10000)); // Wait for every 10 seconds to ping
 
         // Ping every alive client
+        xSemaphoreTake(connMutex, portMAX_DELAY);
         for (int i = 0; i < CHO_MAX_CONNECTIONS; i++) {
             bconn = &connections[i];
             if (bconn->active) {
@@ -26,5 +27,6 @@ void PingClient(void *arg) {
                 SendBanchoPacket(bconn->bstate, CHOPKT_PING, NULL);
             }
         }
+        xSemaphoreGive(connMutex);
     }
 }

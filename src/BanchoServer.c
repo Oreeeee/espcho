@@ -322,6 +322,7 @@ void banchoTask(void *arg) {
     cleanup_connection:
     ESP_LOGI(TAG, "Dropping connection!");
     bstate.alive = false;
+    xSemaphoreTake(connMutex, portMAX_DELAY);
     ESP_LOGI(TAG, "Stopping client");
     close(bconn->clientSock);
     ESP_LOGI(TAG, "Marking connection as free");
@@ -330,6 +331,7 @@ void banchoTask(void *arg) {
     free(bconn->username);
     ESP_LOGI(TAG, "Freeing status");
     StatusUpdate_Free(&bconn->statusUpdate);
+    xSemaphoreGive(connMutex);
     ESP_LOGI(TAG, "Freeing buffer");
     BufferFree(&buf);
 

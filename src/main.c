@@ -77,6 +77,7 @@ void app_main(void) {
   ESP_LOGI(TAG, "Listening...");
 
   httpServerC = initHttpServer_c();
+  connMutex = xSemaphoreCreateMutex();
 
   while (1) {
     struct sockaddr_in client;
@@ -98,10 +99,14 @@ void app_main(void) {
       continue;
     }
 
+    xSemaphoreTake(connMutex, portMAX_DELAY);
+
     BanchoConnection *bconn = &connections[freeConnIndex];
     bconn->clientSock = clientSock;
     bconn->index = freeConnIndex;
     bconn->active = true;
+
+    xSemaphoreGive(connMutex);
 
     ESP_LOGI(TAG, "Starting Bancho task");
     xTaskCreate(

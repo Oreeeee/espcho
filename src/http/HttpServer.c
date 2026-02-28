@@ -11,25 +11,25 @@
 #include "http/scoring.h"
 static const char *TAG = "HttpServer";
 
-httpd_uri_t uri_score_sub = {
-    .uri = "/web/osu-submit-modular.php",
-    .method = HTTP_POST,
-    .handler = scoreSubHandler,
-    .user_ctx = NULL
-};
-
-httpd_uri_t uri_direct_search = {
-    .uri = "/web/osu-search.php",
-    .method = HTTP_GET,
-    .handler = directSearchHandler,
-    .user_ctx = NULL
-};
-
-httpd_uri_t uri_direct_download = {
-    .uri = "/d/*",
-    .method = HTTP_GET,
-    .handler = directDownloadHandler,
-    .user_ctx = NULL
+httpd_uri_t handlers[] = {
+    {
+        .uri = "/web/osu-submit-modular.php",
+        .method = HTTP_POST,
+        .handler = scoreSubHandler,
+        .user_ctx = NULL
+    },
+    {
+        .uri = "/web/osu-search.php",
+        .method = HTTP_GET,
+        .handler = directSearchHandler,
+        .user_ctx = NULL
+    },
+{
+        .uri = "/d/*",
+        .method = HTTP_GET,
+        .handler = directDownloadHandler,
+        .user_ctx = NULL
+    },
 };
 
 httpd_handle_t initHttpServer_c() {
@@ -40,10 +40,14 @@ httpd_handle_t initHttpServer_c() {
     config.uri_match_fn = httpd_uri_match_wildcard;
     httpServerC = NULL;
 
-    if (httpd_start(&httpServerC, &config) == ESP_OK) {
-        ESP_LOGI(TAG, "Registering handler status: %d", httpd_register_uri_handler(httpServerC, &uri_score_sub));
-        ESP_LOGI(TAG, "Registering handler status: %d", httpd_register_uri_handler(httpServerC, &uri_direct_search));
-        ESP_LOGI(TAG, "Registering handler status: %d", httpd_register_uri_handler(httpServerC, &uri_direct_download));
+    if (httpd_start(&httpServerC, &config) != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to start HTTP server");
+        return httpServerC;
+    }
+
+    for (int i = 0; i < sizeof(handlers) / sizeof(httpd_uri_t); i++) {
+        ESP_LOGI(TAG, "Registering handler for %s", handlers[i].uri);
+        ESP_LOGD(TAG, "Registering handler status: %d", httpd_register_uri_handler(httpServerC, &handlers[i]));
     }
 
     ESP_LOGI(TAG, "HTTP Server started on port 80");

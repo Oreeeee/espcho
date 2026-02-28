@@ -84,7 +84,7 @@ void app_main(void) {
     int clientSock;
     if ((clientSock = accept(sockfd, (struct sockaddr *)&client, &clientAddressLen)) < 0) {
       ESP_LOGE(TAG, "Failed to accept connection");
-      return;
+      continue;
     }
 
     ESP_LOGI(TAG, "Acepted connection from %s:%d", inet_ntoa(client.sin_addr), client.sin_port);
@@ -95,7 +95,7 @@ void app_main(void) {
     if (freeConnIndex == -1) {
       ESP_LOGE(TAG, "No free connection slots left, dropping connection");
       close(clientSock);
-      return;
+      continue;
     }
 
     BanchoConnection bconn;

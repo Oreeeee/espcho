@@ -6,6 +6,7 @@
 #include <lwip/sockets.h>
 #include "nvs_flash.h"
 #include "esp_netif.h"
+#include "wifi.h"
 
 #ifdef CHO_DISABLE_BROWNOUT
 #include "soc/soc.h"
@@ -35,17 +36,7 @@ void app_main(void) {
   ESP_LOGI(TAG, "espcho says hello!");
 
   ESP_LOGI(TAG, "Connecting to WiFi");
-  /*
-  WiFi.begin(CHO_WIFI_SSID, CHO_WIFI_PASS);
-
-  while (WiFi.status() != WL_CONNECTED) {
-    Serial.print(".");
-    delay(50);
-  }
-  Serial.println();
-
-  Serial.printf("Connected to WiFI! Got IPv4: %s\n", WiFi.localIP().toString());
-  */
+  wifi_init_sta();
 
   ESP_LOGI(TAG, "Creating chat thread");
   ChatInit();

@@ -254,7 +254,7 @@ void banchoTask(void *arg) {
             ESP_LOGW(TAG, "Received more data than buffer can accept!");
             // TODO Handle that case
             //continue;
-            return;
+            goto cleanup_connection;
         }
 
         recv(bconn->clientSock, buf.data, h.size, 0);
@@ -319,6 +319,7 @@ void banchoTask(void *arg) {
         buf.pos = 0;
     }
 
+    cleanup_connection:
     ESP_LOGI(TAG, "Dropping connection!");
     bstate.alive = false;
     ESP_LOGI(TAG, "Stopping client");
@@ -331,8 +332,6 @@ void banchoTask(void *arg) {
     StatusUpdate_Free(&bconn->statusUpdate);
     ESP_LOGI(TAG, "Freeing buffer");
     BufferFree(&buf);
-    // Serial.println("Freeing bconn");
-    // free(bconn);
 
     ESP_LOGI(TAG, "Exitting task");
     vTaskDelete(NULL);

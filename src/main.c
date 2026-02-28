@@ -98,21 +98,19 @@ void app_main(void) {
       continue;
     }
 
-    BanchoConnection bconn;
-    bconn.clientSock = clientSock;
-    bconn.index = freeConnIndex;
-    bconn.active = true;
-
-    connections[freeConnIndex] = bconn;
+    BanchoConnection *bconn = &connections[freeConnIndex];
+    bconn->clientSock = clientSock;
+    bconn->index = freeConnIndex;
+    bconn->active = true;
 
     ESP_LOGI(TAG, "Starting Bancho task");
     xTaskCreate(
       banchoTask,
       "Bancho",
       4096,
-      &connections[freeConnIndex],
+      bconn,
       1,
-      &bconn.task
+      &bconn->task
       );
     ESP_LOGD(TAG, "Started Bancho task");
   }

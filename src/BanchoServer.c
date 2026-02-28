@@ -237,11 +237,12 @@ void banchoTask(void *arg) {
     SendBanchoPacket(&bstate, CHOPKT_USER_PERMISSIONS, &permBuf);
     free(permBuf.data);
 
+    /* Create out packet recv buffer */
+    Buffer buf;
+    CreateBuffer(&buf);
+
     while (bconn->active) {
         //if (bconn->client.available()) {
-            Buffer buf;
-            CreateBuffer(&buf);
-
             BanchoHeader h;
             ssize_t idRecvSize = recv(bconn->clientSock, &h.packetId, sizeof(h.packetId), 0);
             if (idRecvSize <= 0) {
@@ -317,7 +318,7 @@ void banchoTask(void *arg) {
             }
 
             //if (buf != NULL)
-            BufferFree(&buf);
+            buf.pos = 0;
         //}
     }
 
@@ -331,6 +332,8 @@ void banchoTask(void *arg) {
     free(bconn->username);
     ESP_LOGI(TAG, "Freeing status");
     StatusUpdate_Free(&bconn->statusUpdate);
+    ESP_LOGI(TAG, "Freeing buffer");
+    BufferFree(&buf);
     // Serial.println("Freeing bconn");
     // free(bconn);
 

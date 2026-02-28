@@ -301,7 +301,7 @@ void banchoTask(void *arg) {
                 case CHOPKT_CHANNEL_JOIN:
                     char* channelName;
                     BufferReadOsuString(&buf, &channelName);
-                    ESP_LOGI(TAG, "Received channel join for %s\n", channelName);
+                    ESP_LOGI(TAG, "Received channel join for %s", channelName);
                     /*
                     * TODO: Maybe add the channel name to the list of channels for the connection
                         to not send messages to the clients that are not in that specific channel

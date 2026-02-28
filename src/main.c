@@ -80,14 +80,14 @@ void app_main(void) {
 
   while (1) {
     struct sockaddr_in client;
-    socklen_t clientAddressLen = 0;
+    socklen_t clientAddressLen = sizeof(client);
     int clientSock;
     if ((clientSock = accept(sockfd, (struct sockaddr *)&client, &clientAddressLen)) < 0) {
       ESP_LOGE(TAG, "Failed to accept connection");
       continue;
     }
 
-    ESP_LOGI(TAG, "Acepted connection from %s:%d", inet_ntoa(client.sin_addr), client.sin_port);
+    ESP_LOGI(TAG, "Acepted connection from %s:%d", inet_ntoa(client.sin_addr), htons(client.sin_port));
     ESP_LOGD(TAG, "Trying to start Bancho task");
 
     int freeConnIndex = getFreeConnectionIndex();

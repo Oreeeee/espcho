@@ -135,6 +135,7 @@ void sendChannelJoin(BanchoState *bstate, const char *channelName, int packetTyp
     CreateBuffer(&buf);
     BufferWriteOsuString(&buf, channelName);
     SendBanchoPacket(bstate, packetType, &buf);
+    BufferFree(&buf);
 }
 
 bool authenticateChoUser(BanchoState *bstate, char *login, char *password, BanchoConnection *bconn) {

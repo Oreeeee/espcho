@@ -148,8 +148,7 @@ bool authenticateChoUser(BanchoState *bstate, char *login, char *password, Banch
     if (strcmp(CHO_APPROVED_USER, login) == 0 && strcmp(CHO_APPROVED_PASSWORD, password) == 0) {
     #endif
         #ifdef CHO_DISABLE_AUTH
-        srand(time(NULL));
-        uint32_t userId = rand() % 20000 + 1;
+        uint32_t userId = esp_random() % 20000 + 1;
         BufferWriteS32(&buf, userId);
         bconn->userId = userId;
         #else

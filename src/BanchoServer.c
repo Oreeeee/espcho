@@ -242,84 +242,81 @@ void banchoTask(void *arg) {
     CreateBuffer(&buf);
 
     while (bconn->active) {
-        //if (bconn->client.available()) {
-            BanchoHeader h;
-            ssize_t idRecvSize = recv(bconn->clientSock, &h.packetId, sizeof(h.packetId), 0);
-            if (idRecvSize <= 0) {
+        BanchoHeader h;
+        ssize_t idRecvSize = recv(bconn->clientSock, &h.packetId, sizeof(h.packetId), 0);
+        if (idRecvSize <= 0) {
+            bconn->active = false;
+        }
+        recv(bconn->clientSock, &h.compression, sizeof(h.compression), 0);
+        recv(bconn->clientSock, &h.size, sizeof(h.size), 0);
+
+        if (h.size >= buf.capacity) {
+            ESP_LOGW(TAG, "Received more data than buffer can accept!");
+            // TODO Handle that case
+            //continue;
+            return;
+        }
+
+        recv(bconn->clientSock, buf.data, h.size, 0);
+
+        switch (h.packetId) {
+            case CHOPKT_CHANGE_STATUS:
+                ESP_LOGI(TAG, "%d is changing status", bconn->userId);
+                StatusUpdate p;
+                StatusUpdate_Read(&buf, &p);
+                bconn->statusUpdate = p;
+                break;
+            case CHOPKT_CLIENT_EXIT:
                 bconn->active = false;
-            }
-            recv(bconn->clientSock, &h.compression, sizeof(h.compression), 0);
-            recv(bconn->clientSock, &h.size, sizeof(h.size), 0);
-
-            if (h.size >= buf.capacity) {
-                ESP_LOGW(TAG, "Received more data than buffer can accept!");
-                // TODO Handle that case
-                //continue;
-                return;
-            }
-
-            recv(bconn->clientSock, buf.data, h.size, 0);
-
-            switch (h.packetId) {
-                case CHOPKT_CHANGE_STATUS:
-                    ESP_LOGI(TAG, "%d is changing status", bconn->userId);
-                    StatusUpdate p;
-                    StatusUpdate_Read(&buf, &p);
-                    bconn->statusUpdate = p;
-                    break;
-                case CHOPKT_CLIENT_EXIT:
-                    bconn->active = false;
-                    break;
-                case CHOPKT_CLIENT_SEND_MESSAGE:
-                    ESP_LOGI(TAG, "Received message from client");
-                    ChatMessage m;
-                    ChatMessage_Deserialize(&buf, &m);
-                    m.senderId = bconn->userId;
-                    m.sender = bconn->username;
-                    EnqueueMessage(&m);
-                    break;
-                case CHOPKT_CLIENT_MESSAGE_PRIVATE:
-                    ESP_LOGI(TAG, "Received private message from client");
-                    ChatMessage pm;
-                    ChatMessage_Deserialize(&buf, &pm);
-                    pm.senderId = bconn->userId;
-                    pm.sender = bconn->username;
-                    pm.privateMessage = true;
-                    EnqueueMessage(&pm);
-                    break;
-                case CHOPKT_REQUEST_STATUS:
-                    ESP_LOGI(TAG, "Received RequestStatus");
-                    sendUserStats(&bstate, bconn->userId, bconn->username, bconn->statusUpdate, CHO_STATS_STATISTICS, bconn->version);
-                    break;
-                case CHOPKT_RECEIVE_UPDATES:
-                    ESP_LOGI(TAG, "Client wants to receive status updates");
-                    for (int i = 0; i < CHO_MAX_CONNECTIONS; i++) {
-                        BanchoConnection user = connections[i];
-                        if (user.active) {
-                            sendUserStats(&bstate, user.userId, user.username, user.statusUpdate, CHO_STATS_FULL, bconn->version);
-                        }
+                break;
+            case CHOPKT_CLIENT_SEND_MESSAGE:
+                ESP_LOGI(TAG, "Received message from client");
+                ChatMessage m;
+                ChatMessage_Deserialize(&buf, &m);
+                m.senderId = bconn->userId;
+                m.sender = bconn->username;
+                EnqueueMessage(&m);
+                break;
+            case CHOPKT_CLIENT_MESSAGE_PRIVATE:
+                ESP_LOGI(TAG, "Received private message from client");
+                ChatMessage pm;
+                ChatMessage_Deserialize(&buf, &pm);
+                pm.senderId = bconn->userId;
+                pm.sender = bconn->username;
+                pm.privateMessage = true;
+                EnqueueMessage(&pm);
+                break;
+            case CHOPKT_REQUEST_STATUS:
+                ESP_LOGI(TAG, "Received RequestStatus");
+                sendUserStats(&bstate, bconn->userId, bconn->username, bconn->statusUpdate, CHO_STATS_STATISTICS, bconn->version);
+                break;
+            case CHOPKT_RECEIVE_UPDATES:
+                ESP_LOGI(TAG, "Client wants to receive status updates");
+                for (int i = 0; i < CHO_MAX_CONNECTIONS; i++) {
+                    BanchoConnection user = connections[i];
+                    if (user.active) {
+                        sendUserStats(&bstate, user.userId, user.username, user.statusUpdate, CHO_STATS_FULL, bconn->version);
                     }
-                    break;
-                case CHOPKT_CHANNEL_JOIN:
-                    char* channelName;
-                    BufferReadOsuString(&buf, &channelName);
-                    ESP_LOGI(TAG, "Received channel join for %s", channelName);
-                    /*
-                    * TODO: Maybe add the channel name to the list of channels for the connection
-                        to not send messages to the clients that are not in that specific channel
-                    */
-                    sendChannelJoin(&bstate, channelName, CHOPKT_CHANNEL_JOIN_SUCCESS);
-                    free(channelName);
-                    break;
-                case CHOPKT_PONG:
-                    break;
-                default:
-                    ESP_LOGE(TAG, "Unknown packet received: %d", h.packetId);
-            }
+                }
+                break;
+            case CHOPKT_CHANNEL_JOIN:
+                char* channelName;
+                BufferReadOsuString(&buf, &channelName);
+                ESP_LOGI(TAG, "Received channel join for %s", channelName);
+                /*
+                * TODO: Maybe add the channel name to the list of channels for the connection
+                    to not send messages to the clients that are not in that specific channel
+                */
+                sendChannelJoin(&bstate, channelName, CHOPKT_CHANNEL_JOIN_SUCCESS);
+                free(channelName);
+                break;
+            case CHOPKT_PONG:
+                break;
+            default:
+                ESP_LOGE(TAG, "Unknown packet received: %d", h.packetId);
+        }
 
-            //if (buf != NULL)
-            buf.pos = 0;
-        //}
+        buf.pos = 0;
     }
 
     ESP_LOGI(TAG, "Dropping connection!");

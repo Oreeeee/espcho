@@ -181,7 +181,7 @@ void setEmptyStatus(BanchoConnection *bconn) {
  * Broadcasts status updates to all clients that stated they want
  * to receive status updates.
  */
-void broadcactStatusUpdate(uint32_t userId, const char *username, const StatusUpdate *update) {
+void broadcactStatusUpdate(uint32_t userId, const char *username, const StatusUpdate *update, uint8_t completeness) {
     ESP_LOGI(TAG, "Broadcasting status update of %s", username);
 
     xSemaphoreTake(connMutex, portMAX_DELAY);
@@ -190,7 +190,7 @@ void broadcactStatusUpdate(uint32_t userId, const char *username, const StatusUp
             continue;
         }
         ESP_LOGI(TAG, "Broadcasting to %s", connections[i].username);
-        sendUserStats(connections[i].bstate, userId, username, *update, CHO_STATS_STATUS, connections[i].version);
+        sendUserStats(connections[i].bstate, userId, username, *update, completeness, connections[i].version);
     }
     xSemaphoreGive(connMutex);
 }
@@ -247,6 +247,9 @@ void banchoTask(void *arg) {
     ESP_LOGD(TAG, "Sending stats on login");
     sendUserStats(&bstate, bconn->userId, bconn->username, bconn->statusUpdate, CHO_STATS_STATISTICS, bconn->version);
 
+    // Broadcast own status to all users
+    broadcactStatusUpdate(bconn->userId, bconn->username, &bconn->statusUpdate, CHO_STATS_FULL);
+
     ESP_LOGD(TAG, "Sending permissions");
     Buffer permBuf;
     CreateBuffer(&permBuf, sizeof(uint32_t));
@@ -282,7 +285,7 @@ void banchoTask(void *arg) {
                 StatusUpdate p;
                 StatusUpdate_Read(&buf, &p);
                 bconn->statusUpdate = p;
-                broadcactStatusUpdate(bconn->userId, bconn->username, &bconn->statusUpdate);
+                broadcactStatusUpdate(bconn->userId, bconn->username, &bconn->statusUpdate, CHO_STATS_STATUS);
                 break;
             case CHOPKT_CLIENT_EXIT:
                 bconn->active = false;

@@ -112,7 +112,7 @@ void sendUserStats(BanchoState *bstate, uint32_t userId, char *username, StatusU
     }
 
     Buffer buf;
-    CreateBuffer(&buf, 128);
+    CreateBuffer(&buf, 0);
 
     UserStats_Write(&p, bstate, &buf, version);
     SendBanchoPacket(bstate, CHOPKT_USER_STATS, &buf);

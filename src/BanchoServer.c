@@ -195,6 +195,16 @@ void broadcactStatusUpdate(uint32_t userId, const char *username, const StatusUp
     xSemaphoreGive(connMutex);
 }
 
+BanchoConnection* GetClientById(int32_t id) {
+    for (int i = 0; i < CHO_MAX_CONNECTIONS; i++) {
+        BanchoConnection *user = &connections[i];
+        if (user->active && user->userId == id) {
+            return &connections[i];
+        }
+    }
+    return NULL;
+}
+
 void banchoTask(void *arg) {
     BanchoConnection *bconn = (BanchoConnection*)arg;
 
@@ -331,6 +341,29 @@ void banchoTask(void *arg) {
                 */
                 sendChannelJoin(&bstate, channelName, CHOPKT_CHANNEL_JOIN_SUCCESS);
                 free(channelName);
+                break;
+            case CHOPKT_START_SPECTATING:
+                ;int32_t targetPlayer = 0;
+                BufferReadS32(&buf, &targetPlayer);
+                ESP_LOGI(TAG, "%d wants to spectate %d", bconn->userId, targetPlayer);
+
+                // Inform the client that it's being spectated
+                BanchoConnection* targetConnection = GetClientById(targetPlayer);
+                if (targetConnection == NULL) {
+                    ESP_LOGE(TAG, "Couldn't find target player %d to spectate");
+                    break;
+                }
+                Buffer outBuf;
+                CreateBuffer(&outBuf, 2 * sizeof(int32_t));
+                BufferWriteS32(&outBuf, (int32_t)bconn->userId);
+                SendBanchoPacket(targetConnection->bstate, CHOPKT_SPECTATOR_JOINED, &outBuf);
+                BufferFree(&outBuf);
+
+                // TODO: Store some data idk
+                break;
+            case CHOPKT_SEND_FRAMES:
+                ESP_LOGI(TAG, "Received spectator frames from client");
+                // TODO: Broadcast the frames
                 break;
             case CHOPKT_PONG:
                 break;

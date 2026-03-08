@@ -9,7 +9,13 @@ typedef struct {
     uint8_t* data;
 } Buffer;
 
-void CreateBuffer(Buffer *buf);
+/*
+ * Initializes a heap-allocated buffer of specific capacity.
+ * Takes in a pointer to an uninitialized buffer.
+ * If the capacity is 0, then the value of BUFFER_SIZE is used
+ * as the buffer capacity.
+ */
+void CreateBuffer(Buffer *buf, uint16_t capacity);
 void BufferFree(Buffer *buf);
 
 #endif //BUFFER_H

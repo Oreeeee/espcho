@@ -59,7 +59,7 @@ void ChatLoop(void *args) {
 // Send message to a specified client
 void SendMessage(ChatMessage *msg, BanchoConnection *bconn) {
     Buffer buf;
-    CreateBuffer(&buf);
+    CreateBuffer(&buf, 0);
     ChatMessage_Serialize(&buf, msg);
     SendBanchoPacket(bconn->bstate, CHOPKT_SERVER_SEND_MESSAGE, &buf);
     BufferFree(&buf);

@@ -112,7 +112,7 @@ void sendUserStats(BanchoState *bstate, uint32_t userId, char *username, StatusU
     }
 
     Buffer buf;
-    CreateBuffer(&buf);
+    CreateBuffer(&buf, 128);
 
     UserStats_Write(&p, bstate, &buf, version);
     SendBanchoPacket(bstate, CHOPKT_USER_STATS, &buf);
@@ -132,7 +132,7 @@ void sendChannelJoin(BanchoState *bstate, const char *channelName, int packetTyp
     }
 
     Buffer buf;
-    CreateBuffer(&buf);
+    CreateBuffer(&buf, 64);
     BufferWriteOsuString(&buf, channelName);
     SendBanchoPacket(bstate, packetType, &buf);
     BufferFree(&buf);
@@ -140,7 +140,7 @@ void sendChannelJoin(BanchoState *bstate, const char *channelName, int packetTyp
 
 bool authenticateChoUser(BanchoState *bstate, char *login, char *password, BanchoConnection *bconn) {
     Buffer buf;
-    CreateBuffer(&buf);
+    CreateBuffer(&buf, sizeof(int32_t));
 
     #ifdef CHO_DISABLE_AUTH
     if (true) {
@@ -231,14 +231,14 @@ void banchoTask(void *arg) {
 
     ESP_LOGD(TAG, "Sending permissions");
     Buffer permBuf;
-    CreateBuffer(&permBuf);
+    CreateBuffer(&permBuf, sizeof(uint32_t));
     BufferWriteU32(&permBuf, PERM_ALL);
     SendBanchoPacket(&bstate, CHOPKT_USER_PERMISSIONS, &permBuf);
     free(permBuf.data);
 
     /* Create out packet recv buffer */
     Buffer buf;
-    CreateBuffer(&buf);
+    CreateBuffer(&buf, 0);
 
     while (bconn->active) {
         BanchoHeader h;

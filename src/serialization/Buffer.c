@@ -2,9 +2,13 @@
 #include <stdlib.h>
 #include "constants.h"
 
-void CreateBuffer(Buffer *buf) {
+void CreateBuffer(Buffer *buf, uint16_t capacity) {
+    if (capacity == 0) {
+        capacity = BUFFER_SIZE;
+    }
+
     buf->pos = 0;
-    buf->capacity = BUFFER_SIZE;
+    buf->capacity = capacity;
     buf->data = (uint8_t*)calloc(buf->capacity, sizeof(uint8_t));
 }
 

@@ -6,9 +6,8 @@
 
 typedef struct {
     SemaphoreHandle_t writeLock;
-    //bool writeLock;
-    bool alive;
     int clientSock;
+    bool alive;
 } BanchoState;
 
 #endif

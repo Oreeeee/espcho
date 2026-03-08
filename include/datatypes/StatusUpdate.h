@@ -6,13 +6,13 @@
 #include "serialization/Buffer.h"
 
 typedef struct {
-    uint8_t status;
-    bool beatmapUpdate;
     char *statusText;
     char *beatmapMD5;
-    uint16_t mods;
-    uint8_t mode;
     int32_t beatmapID;
+    uint16_t mods;
+    uint8_t status;
+    bool beatmapUpdate;
+    uint8_t mode;
 } StatusUpdate;
 
 void StatusUpdate_Read(Buffer* buf, StatusUpdate* p);

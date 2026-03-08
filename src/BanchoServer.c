@@ -87,7 +87,7 @@ void SendBanchoPacket(BanchoState* bstate, uint16_t packetId, const Buffer* buf)
     xSemaphoreGive(bstate->writeLock);
 }
 
-void sendUserStats(BanchoState *bstate, uint32_t userId, char *username, StatusUpdate statusUpdate, uint8_t completness, uint16_t version) {
+void sendUserStats(BanchoState *bstate, uint32_t userId, const char *username, StatusUpdate statusUpdate, uint8_t completness, uint16_t version) {
     UserStats p;
     p.userId = userId;
     p.completness = completness;
@@ -177,6 +177,24 @@ void setEmptyStatus(BanchoConnection *bconn) {
     bconn->statusUpdate.beatmapID = 0;
 }
 
+/*
+ * Broadcasts status updates to all clients that stated they want
+ * to receive status updates.
+ */
+void broadcactStatusUpdate(uint32_t userId, const char *username, const StatusUpdate *update) {
+    ESP_LOGI(TAG, "Broadcasting status update of %s", username);
+
+    xSemaphoreTake(connMutex, portMAX_DELAY);
+    for (int i = 0; i < CHO_MAX_CONNECTIONS; i++) {
+        if (!(connections[i].clientFlags & CHO_CONN_FLAG_RECEIVE_STATUSES)) {
+            continue;
+        }
+        ESP_LOGI(TAG, "Broadcasting to %s", connections[i].username);
+        sendUserStats(connections[i].bstate, userId, username, *update, CHO_STATS_STATUS, connections[i].version);
+    }
+    xSemaphoreGive(connMutex);
+}
+
 void banchoTask(void *arg) {
     BanchoConnection *bconn = (BanchoConnection*)arg;
 
@@ -264,6 +282,7 @@ void banchoTask(void *arg) {
                 StatusUpdate p;
                 StatusUpdate_Read(&buf, &p);
                 bconn->statusUpdate = p;
+                broadcactStatusUpdate(bconn->userId, bconn->username, &bconn->statusUpdate);
                 break;
             case CHOPKT_CLIENT_EXIT:
                 bconn->active = false;

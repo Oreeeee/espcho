@@ -6,6 +6,15 @@ Experimental osu! server for 2010 clients, running on ESP32. It's designed for t
 ## Status
 This server is very experimental, it will probably never be production ready (why would you run a production server on a microcontroller anyways?)
 
+## Connecting
+Unfortunately old osu! clients don't have an equivalent to `-devserver`, and doing just DNS tricks won't work because the Bancho IP address is hardcoded.
+
+However, you can connect to the server using [Titanic! Hook](https://github.com/osuTitanic/hook) which will properly patch the Bancho IP without modifying the client.
+
+You have to add records to hosts file (or add these at your self-hosted DNS server) with `osu` and `server` subdomains pointing at your ESP32's IP, for example for domain `espcho.local` you would add `osu.espcho.local` and `server.espcho.local`.
+
+Next, you'll follow the [Titanic! Hook instructions](https://osu.titanic.sh/wiki/en/Patcher). Launch the client using the Titanic! Hook executable at least once. Then open `Titanic!.cfg` in a text editor and edit `ServerName` option to point at your ESP32's local domain (`espcho.local` in this case). Once you start the game using `Titanic.exe`, the client should be connected to espcho. Note that Titanic! Hook does not tamper with your osu! executable, so you have to start it using the Titanic! Hook executable to connect to espcho.
+
 ## osu!Direct
 This implementation implements osu!Direct by forwarding requests to Mino (catboy.best).
 

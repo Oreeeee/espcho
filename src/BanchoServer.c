@@ -291,6 +291,7 @@ void banchoTask(void *arg) {
                 break;
             case CHOPKT_RECEIVE_UPDATES:
                 ESP_LOGI(TAG, "Client wants to receive status updates");
+                bconn->clientFlags |= CHO_CONN_FLAG_RECEIVE_STATUSES;
                 for (int i = 0; i < CHO_MAX_CONNECTIONS; i++) {
                     BanchoConnection user = connections[i];
                     if (user.active) {
@@ -333,6 +334,8 @@ void banchoTask(void *arg) {
     xSemaphoreGive(connMutex);
     ESP_LOGI(TAG, "Freeing buffer");
     BufferFree(&buf);
+
+    bconn->clientFlags = 0;
 
     ESP_LOGI(TAG, "Exitting task");
     vTaskDelete(NULL);

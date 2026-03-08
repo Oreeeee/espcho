@@ -22,6 +22,9 @@
 #define CHANNEL_LIST_AUTOJOIN_LEN 1
 #define CHANNEL_LIST_LEN 3
 
+#define CHO_CONN_FLAG_NONE (1 << 0)
+#define CHO_CONN_FLAG_RECEIVE_STATUSES (1 << 1)
+
 // TODO: Is static the best way to do this?
 static const char* ChannelListAutojoin[CHANNEL_LIST_AUTOJOIN_LEN] = {"#osu"};
 static const char* ChannelList[CHANNEL_LIST_LEN] = {"#lobby", "#spectator", "#espcho"};

@@ -14,6 +14,7 @@ typedef struct {
     StatusUpdate statusUpdate;
     BanchoState *bstate;
     uint16_t version; // uint16_t is enough for pre-2012 clients
+    uint8_t clientFlags;
     bool active;
 } BanchoConnection;
 

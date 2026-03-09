@@ -446,6 +446,24 @@ void banchoTask(void *arg) {
                 }
                 xSemaphoreGive(connMutex);
                 break;
+            case CHOPKT_CANT_SPECTATE:
+                ESP_LOGI(TAG, "%d can't spectate", bconn->userId);
+                Buffer outBuf2;
+                CreateBuffer(&outBuf2, sizeof(uint32_t));
+                BufferWriteU32(&outBuf2, bconn->userId);
+
+                xSemaphoreTake(connMutex, portMAX_DELAY);
+                for (int i = 0; i < CHO_MAX_CONNECTIONS; i++) {
+                    BanchoConnection* user = &connections[i];
+                    if (user->spectatingPlayer != bconn->userId) {
+                        continue;
+                    }
+
+                    SendBanchoPacket(user->bstate, CHOPKT_SPECTATOR_CANT_SPECTATE, &outBuf2);
+                }
+                xSemaphoreGive(connMutex);
+
+                break;
             case CHOPKT_ERROR_REPORT:
                 ESP_LOGW(TAG, "Received error report from %d", bconn->userId);
                 char *error;

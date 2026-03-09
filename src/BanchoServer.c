@@ -378,6 +378,13 @@ void banchoTask(void *arg) {
                 }
                 xSemaphoreGive(connMutex);
                 break;
+            case CHOPKT_ERROR_REPORT:
+                ESP_LOGW(TAG, "Received error report from %d", bconn->userId);
+                char *error;
+                BufferReadOsuString(&buf, &error);
+                ESP_LOGW(TAG, "%s", error);
+                free(error);
+                break;
             case CHOPKT_PONG:
                 break;
             default:

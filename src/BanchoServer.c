@@ -373,7 +373,7 @@ void banchoTask(void *arg) {
                     break;
                 }
                 Buffer outBuf;
-                CreateBuffer(&outBuf, 2 * sizeof(uint32_t));
+                CreateBuffer(&outBuf, sizeof(uint32_t));
                 BufferWriteU32(&outBuf, bconn->userId);
                 SendBanchoPacket(targetConnection->bstate, CHOPKT_SPECTATOR_JOINED, &outBuf);
                 BufferFree(&outBuf);

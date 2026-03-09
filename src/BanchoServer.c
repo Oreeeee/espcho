@@ -195,7 +195,7 @@ void broadcactStatusUpdate(uint32_t userId, const char *username, const StatusUp
     xSemaphoreGive(connMutex);
 }
 
-BanchoConnection* GetClientById(int32_t id) {
+BanchoConnection* GetClientById(uint32_t id) {
     for (int i = 0; i < CHO_MAX_CONNECTIONS; i++) {
         BanchoConnection *user = &connections[i];
         if (user->active && user->userId == id) {
@@ -343,8 +343,8 @@ void banchoTask(void *arg) {
                 free(channelName);
                 break;
             case CHOPKT_START_SPECTATING:
-                ;int32_t targetPlayer = 0;
-                BufferReadS32(&buf, &targetPlayer);
+                ;uint32_t targetPlayer = 0;
+                BufferReadU32(&buf, &targetPlayer);
                 ESP_LOGI(TAG, "%d wants to spectate %d", bconn->userId, targetPlayer);
 
                 // Inform the client that it's being spectated
@@ -354,16 +354,29 @@ void banchoTask(void *arg) {
                     break;
                 }
                 Buffer outBuf;
-                CreateBuffer(&outBuf, 2 * sizeof(int32_t));
-                BufferWriteS32(&outBuf, (int32_t)bconn->userId);
+                CreateBuffer(&outBuf, 2 * sizeof(uint32_t));
+                BufferWriteU32(&outBuf, bconn->userId);
                 SendBanchoPacket(targetConnection->bstate, CHOPKT_SPECTATOR_JOINED, &outBuf);
                 BufferFree(&outBuf);
 
-                // TODO: Store some data idk
+                bconn->spectatingPlayer = targetPlayer;
                 break;
             case CHOPKT_SEND_FRAMES:
                 ESP_LOGI(TAG, "Received spectator frames from client");
-                // TODO: Broadcast the frames
+
+                // Broadcast the frames to every client that's spectating the current client
+                // TODO: Don't block the client's Bancho thread when doing this
+                // TODO: Find a better way than an O(n) loop :D
+                xSemaphoreTake(connMutex, portMAX_DELAY);
+                for (int i = 0; i < CHO_MAX_CONNECTIONS; i++) {
+                    BanchoConnection* user = &connections[i];
+                    if (user->spectatingPlayer != bconn->userId) {
+                        continue;
+                    }
+
+                    SendBanchoPacket(user->bstate, CHOPKT_SPECTATE_FRAMES, &buf);
+                }
+                xSemaphoreGive(connMutex);
                 break;
             case CHOPKT_PONG:
                 break;
@@ -391,6 +404,7 @@ void banchoTask(void *arg) {
     BufferFree(&buf);
 
     bconn->clientFlags = 0;
+    bconn->spectatingPlayer = 0;
 
     ESP_LOGI(TAG, "Exitting task");
     vTaskDelete(NULL);

@@ -376,6 +376,19 @@ void banchoTask(void *arg) {
                 CreateBuffer(&outBuf, sizeof(uint32_t));
                 BufferWriteU32(&outBuf, bconn->userId);
                 SendBanchoPacket(targetConnection->bstate, CHOPKT_SPECTATOR_JOINED, &outBuf);
+
+                // Inform other spectators of our presence with fellow spectator joined packet
+                xSemaphoreTake(connMutex, portMAX_DELAY);
+                for (int i = 0; i < CHO_MAX_CONNECTIONS; i++) {
+                    BanchoConnection* user = &connections[i];
+                    if (user->spectatingPlayer != targetPlayer) {
+                        continue;
+                    }
+                    ESP_LOGI(TAG, "Notifying fellow spectator %d of %d's presence", user->userId, bconn->userId);
+                    SendBanchoPacket(user->bstate, CHOPKT_FELLOW_SPECTATOR_JOINED, &outBuf);
+                }
+                xSemaphoreGive(connMutex);
+
                 BufferFree(&outBuf);
 
                 bconn->spectatingPlayer = targetPlayer;
@@ -395,6 +408,19 @@ void banchoTask(void *arg) {
                 CreateBuffer(&outBuf1, sizeof(uint32_t));
                 BufferWriteU32(&outBuf1, bconn->userId);
                 SendBanchoPacket(spectatedConnection->bstate, CHOPKT_SPECTATOR_LEFT, &outBuf1);
+
+                // Inform other spectators about us leaving with fellow spectator left packet
+                xSemaphoreTake(connMutex, portMAX_DELAY);
+                for (int i = 0; i < CHO_MAX_CONNECTIONS; i++) {
+                    BanchoConnection* user = &connections[i];
+                    if (user->spectatingPlayer != targetPlayer) {
+                        continue;
+                    }
+                    ESP_LOGI(TAG, "Notifying fellow spectator %d about %d leaving", user->userId, bconn->userId);
+                    SendBanchoPacket(user->bstate, CHOPKT_FELLOW_SPECTATOR_LEFT, &outBuf);
+                }
+                xSemaphoreGive(connMutex);
+
                 BufferFree(&outBuf1);
 
                 xSemaphoreTake(connMutex, portMAX_DELAY);

@@ -382,6 +382,7 @@ void banchoTask(void *arg) {
                 break;
             case CHOPKT_SEND_FRAMES:
                 ESP_LOGI(TAG, "Received spectator frames from client");
+                buf.pos = h.size; // SendBanchoPacket sends buf.pos bytes and reading the bancho packet leaves the pos at 0 so we need to set it manually
 
                 // Broadcast the frames to every client that's spectating the current client
                 // TODO: Don't block the client's Bancho thread when doing this

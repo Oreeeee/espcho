@@ -380,6 +380,28 @@ void banchoTask(void *arg) {
 
                 bconn->spectatingPlayer = targetPlayer;
                 break;
+            case CHOPKT_STOP_SPECTATING:
+                ;uint32_t spectatedPlayer = bconn->spectatingPlayer;
+
+                ESP_LOGI(TAG, "%d is no longer spectating %d", bconn->userId, spectatedPlayer);
+                BanchoConnection* spectatedConnection = GetClientById(spectatedPlayer);
+                if (spectatedConnection == NULL) {
+                    ESP_LOGE(TAG, "Couldn't get target player by id!");
+                    break;
+                }
+
+                // Notify the host about the spectator leaving
+                Buffer outBuf1;
+                CreateBuffer(&outBuf1, sizeof(uint32_t));
+                BufferWriteU32(&outBuf1, bconn->userId);
+                SendBanchoPacket(spectatedConnection->bstate, CHOPKT_SPECTATOR_LEFT, &outBuf1);
+                BufferFree(&outBuf1);
+
+                xSemaphoreTake(connMutex, portMAX_DELAY);
+                bconn->spectatingPlayer = 0;
+                xSemaphoreGive(connMutex);
+
+                break;
             case CHOPKT_SEND_FRAMES:
                 ESP_LOGI(TAG, "Received spectator frames from client");
                 buf.pos = h.size; // SendBanchoPacket sends buf.pos bytes and reading the bancho packet leaves the pos at 0 so we need to set it manually

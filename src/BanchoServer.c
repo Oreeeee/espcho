@@ -195,6 +195,24 @@ void broadcactStatusUpdate(uint32_t userId, const char *username, const StatusUp
     xSemaphoreGive(connMutex);
 }
 
+/*
+ * Sends all statuses of every user to the bconn
+ */
+void getAllUserStats(const BanchoConnection *bconn) {
+    xSemaphoreTake(connMutex, portMAX_DELAY);
+
+    for (int i = 0; i < CHO_MAX_CONNECTIONS; i++) {
+        BanchoConnection *different = &connections[i];
+        if (!different->active) {
+            continue;
+        }
+
+        sendUserStats(bconn->bstate, different->userId, different->username, different->statusUpdate, CHO_STATS_STATUS, bconn->version);
+    }
+
+    xSemaphoreGive(connMutex);
+}
+
 BanchoConnection* GetClientById(uint32_t id) {
     for (int i = 0; i < CHO_MAX_CONNECTIONS; i++) {
         BanchoConnection *user = &connections[i];
@@ -253,9 +271,10 @@ void banchoTask(void *arg) {
     ESP_LOGD(TAG, "Setting empty status for current user");
     setEmptyStatus(bconn);
 
-    // Initial user stats send, for some reason osu! doesn't request them when using "Remember password"
+    // Send out statistics and every other user ID
     ESP_LOGD(TAG, "Sending stats on login");
     sendUserStats(&bstate, bconn->userId, bconn->username, bconn->statusUpdate, CHO_STATS_STATISTICS, bconn->version);
+    getAllUserStats(bconn);
 
     // Broadcast own status to all users
     broadcactStatusUpdate(bconn->userId, bconn->username, &bconn->statusUpdate, CHO_STATS_FULL);

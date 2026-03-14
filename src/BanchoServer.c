@@ -195,7 +195,7 @@ void getAllUserStats(const BanchoConnection *bconn) {
 
     for (int i = 0; i < CHO_MAX_CONNECTIONS; i++) {
         BanchoConnection *different = &connections[i];
-        if (!different->active) {
+        if (!(different->clientFlags & CHO_CONN_FLAG_ACTIVE)) {
             continue;
         }
 
@@ -208,7 +208,7 @@ void getAllUserStats(const BanchoConnection *bconn) {
 BanchoConnection* GetClientById(uint32_t id) {
     for (int i = 0; i < CHO_MAX_CONNECTIONS; i++) {
         BanchoConnection *user = &connections[i];
-        if (user->active && user->userId == id) {
+        if (user->clientFlags & CHO_CONN_FLAG_ACTIVE && user->userId == id) {
             return &connections[i];
         }
     }
@@ -234,7 +234,7 @@ void banchoTask(void *arg) {
         BufferFree(&buf);
 
         close(bconn->clientSock);
-        bconn->active = false;
+        bconn->clientFlags &= ~CHO_CONN_FLAG_ACTIVE;
         free(bconn);
 
         vTaskDelete(NULL);
@@ -278,11 +278,11 @@ void banchoTask(void *arg) {
     // We're reusing the previous stack Buffer object to not bloat up the stack
     CreateBuffer(&buf, 0);
 
-    while (bconn->active) {
+    while (bconn->clientFlags & CHO_CONN_FLAG_ACTIVE) {
         BanchoHeader h;
         ssize_t idRecvSize = recv(bconn->clientSock, &h.packetId, sizeof(h.packetId), 0);
         if (idRecvSize <= 0) {
-            bconn->active = false;
+            bconn->clientFlags &= ~CHO_CONN_FLAG_ACTIVE;
         }
         recv(bconn->clientSock, &h.compression, sizeof(h.compression), 0);
         recv(bconn->clientSock, &h.size, sizeof(h.size), 0);
@@ -305,7 +305,7 @@ void banchoTask(void *arg) {
                 broadcactStatusUpdate(bconn->userId, bconn->username, &bconn->statusUpdate, CHO_STATS_STATUS);
                 break;
             case CHOPKT_CLIENT_EXIT:
-                bconn->active = false;
+                bconn->clientFlags &= ~CHO_CONN_FLAG_ACTIVE;
                 break;
             case CHOPKT_CLIENT_SEND_MESSAGE:
                 ESP_LOGI(TAG, "Received message from client");
@@ -333,7 +333,7 @@ void banchoTask(void *arg) {
                 bconn->clientFlags |= CHO_CONN_FLAG_RECEIVE_STATUSES;
                 for (int i = 0; i < CHO_MAX_CONNECTIONS; i++) {
                     BanchoConnection user = connections[i];
-                    if (user.active) {
+                    if (user.clientFlags & CHO_CONN_FLAG_ACTIVE) {
                         sendUserStats(&bstate, user.userId, user.username, user.statusUpdate, CHO_STATS_FULL, bconn->version);
                     }
                 }
@@ -475,7 +475,7 @@ void banchoTask(void *arg) {
     ESP_LOGI(TAG, "Stopping client");
     close(bconn->clientSock);
     ESP_LOGI(TAG, "Marking connection as free");
-    bconn->active = false;
+    bconn->clientFlags &= ~CHO_CONN_FLAG_ACTIVE;
     ESP_LOGI(TAG, "Freeing username");
     free(bconn->username);
     ESP_LOGI(TAG, "Freeing status");
@@ -497,7 +497,7 @@ BanchoConnection* GetClientByName(char *name) {
     for (int i = 0; i < CHO_MAX_CONNECTIONS; i++) {
         BanchoConnection *user = &connections[i];
         // TODO: Use safe strncmp
-        if (user->active && strcmp(name, user->username) == 0) {
+        if (user->clientFlags & CHO_CONN_FLAG_ACTIVE && strcmp(name, user->username) == 0) {
             return &connections[i];
         }
     }

@@ -7,6 +7,7 @@
 #include "bancho/BanchoPackets.h"
 
 #define LOG_LOCAL_LEVEL ESP_LOG_DEBUG
+#include "constants.h"
 #include "esp_log.h"
 static const char* TAG = "ChatManager";
 
@@ -46,7 +47,7 @@ void ChatLoop(void *args) {
             for (int i = 0; i < CHO_MAX_CONNECTIONS; i++) {
                 bconn = &connections[i];
                 // Send messages only to relevant clients
-                if (bconn->active && bconn->userId != msg->senderId) {
+                if (bconn->clientFlags & CHO_CONN_FLAG_ACTIVE && bconn->userId != msg->senderId) {
                     SendMessage(msg, bconn);
                 }
             }

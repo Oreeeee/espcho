@@ -14,6 +14,7 @@
 #endif
 
 #define LOG_LOCAL_LEVEL ESP_LOG_DEBUG
+#include "constants.h"
 #include "esp_log.h"
 static const char *TAG = "main";
 
@@ -104,7 +105,7 @@ void app_main(void) {
     BanchoConnection *bconn = &connections[freeConnIndex];
     bconn->clientSock = clientSock;
     bconn->index = freeConnIndex;
-    bconn->active = true;
+    bconn->clientFlags |= CHO_CONN_FLAG_ACTIVE;
 
     xSemaphoreGive(connMutex);
 

@@ -2,6 +2,7 @@
 #include "BanchoServer.h"
 #include "bancho/BanchoPackets.h"
 #include "config.h"
+#include "constants.h"
 
 #ifdef CHO_LOG_PINGER
 #define LOG_LOCAL_LEVEL LOG_LEVEL_DEBUG
@@ -20,7 +21,7 @@ void PingClient(void *arg) {
         xSemaphoreTake(connMutex, portMAX_DELAY);
         for (int i = 0; i < CHO_MAX_CONNECTIONS; i++) {
             bconn = &connections[i];
-            if (bconn->active) {
+            if (bconn->clientFlags & CHO_CONN_FLAG_ACTIVE) {
 #ifdef CHO_LOG_PINGER
                 ESP_LOGD(TAG, "[PINGER] Pinging client %d\n", i);
 #endif

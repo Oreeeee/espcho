@@ -24,6 +24,7 @@
 
 #define CHO_CONN_FLAG_NONE (1 << 0)
 #define CHO_CONN_FLAG_RECEIVE_STATUSES (1 << 1)
+#define CHO_CONN_FLAG_ACTIVE (1 << 2)
 
 // TODO: Is static the best way to do this?
 static const char* ChannelListAutojoin[CHANNEL_LIST_AUTOJOIN_LEN] = {"#osu"};

@@ -2,7 +2,6 @@
 
 #include "config.h"
 #include "constants.h"
-#include "bancho/LoginPacket.h"
 #include "bancho/BanchoHeader.h"
 #include "bancho/BanchoPackets.h"
 #include "bancho/UserStats.h"
@@ -39,32 +38,54 @@ ssize_t recv_until(int sock, char terminator, char *buffer, size_t maxlen) {
     return i;
 }
 
-LoginPacket getConnectionInfo(int clientSock) {
-    LoginPacket lp;
-
-    lp.username = (char*)calloc(CHO_MAX_LOGIN_STR, sizeof(char));
-    lp.password = (char*)calloc(CHO_MAX_LOGIN_STR, sizeof(char));
-    lp.clientInfo = (char*)calloc(CHO_MAX_LOGIN_STR, sizeof(char));
-    char dummy;
-
-    recv_until(clientSock, '\r', lp.username, CHO_MAX_LOGIN_STR);
-    recv(clientSock, &dummy, 1, 0); // \n
-    recv_until(clientSock, '\r', lp.password, CHO_MAX_LOGIN_STR);
-    recv(clientSock, &dummy, 1, 0); // \n
-    recv_until(clientSock, '\r', lp.clientInfo, CHO_MAX_LOGIN_STR);
-    recv(clientSock, &dummy, 1, 0); // \n
-    
-    return lp;
-}
-
-int getClientVersion(LoginPacket lp) {
+int getClientVersion(const char* clientInfo) {
     int version;
-    if (sscanf(lp.clientInfo, "b%d", &version) != 1) {
+    if (sscanf(clientInfo, "b%d", &version) != 1) {
         ESP_LOGE(TAG, "Failed to get client's version! Assuming b1596");
         return 1596;
     }
     ESP_LOGD(TAG, "Got client's version: b%d", version);
     return version;
+}
+
+bool initializeConnection(BanchoConnection* bconn) {
+    int sock = bconn->clientSock;
+
+    char username[CHO_MAX_LOGIN_STR];
+    char password[CHO_MAX_LOGIN_STR];
+    char clientInfo[CHO_MAX_LOGIN_STR];
+    char dummy;
+
+    recv_until(sock, '\r', username, CHO_MAX_LOGIN_STR);
+    recv(sock, &dummy, 1, 0); // \n
+    recv_until(sock, '\r', password, CHO_MAX_LOGIN_STR);
+    recv(sock, &dummy, 1, 0); // \n
+    recv_until(sock, '\r', clientInfo, CHO_MAX_LOGIN_STR);
+    recv(sock, &dummy, 1, 0); // \n
+
+    ESP_LOGD(TAG, "Username: %s\nPassword: %s\nClient info: %s", username, password, clientInfo);
+
+#ifdef CHO_DISABLE_AUTH
+    if (true) {
+#else
+    if (strcmp(CHO_APPROVED_USER, username) == 0 && strcmp(CHO_APPROVED_PASSWORD, password) == 0) {
+#endif
+#ifdef CHO_DISABLE_AUTH
+        uint32_t userId = esp_random() % 20000 + 1;
+        bconn->userId = userId;
+#else
+        bconn->userId = CHO_APPROVED_USERID;
+#endif
+    } else {
+        ESP_LOGI(TAG, "User authentication failed!");
+        return false;
+    }
+
+    bconn->version = getClientVersion(clientInfo);
+    bconn->username = malloc(strlen(username) + 1);
+    strncpy(bconn->username, username, strlen(username) + 1);
+    
+    return true;
 }
 
 void SendBanchoPacket(BanchoState* bstate, uint16_t packetId, const Buffer* buf) {
@@ -138,35 +159,6 @@ void sendChannelJoin(BanchoState *bstate, const char *channelName, int packetTyp
     BufferFree(&buf);
 }
 
-bool authenticateChoUser(BanchoState *bstate, char *login, char *password, BanchoConnection *bconn) {
-    Buffer buf;
-    CreateBuffer(&buf, sizeof(int32_t));
-
-    #ifdef CHO_DISABLE_AUTH
-    if (true) {
-    #else
-    if (strcmp(CHO_APPROVED_USER, login) == 0 && strcmp(CHO_APPROVED_PASSWORD, password) == 0) {
-    #endif
-        #ifdef CHO_DISABLE_AUTH
-        uint32_t userId = esp_random() % 20000 + 1;
-        BufferWriteS32(&buf, userId);
-        bconn->userId = userId;
-        #else
-        BufferWriteU32(&buf, CHO_APPROVED_USERID);
-        #endif
-
-        SendBanchoPacket(bstate, CHOPKT_LOGINREPLY, &buf);
-        BufferFree(&buf);
-        return true;
-    }
-
-    BufferWriteS32(&buf, LOGIN_WRONG_PASS);
-    SendBanchoPacket(bstate, CHOPKT_LOGINREPLY, &buf);
-    BufferFree(&buf);
-
-    return false;
-}
-
 void setEmptyStatus(BanchoConnection *bconn) {
     bconn->statusUpdate.status = 0;
     bconn->statusUpdate.beatmapUpdate = true;
@@ -225,22 +217,22 @@ BanchoConnection* GetClientById(uint32_t id) {
 
 void banchoTask(void *arg) {
     BanchoConnection *bconn = (BanchoConnection*)arg;
-
-    ESP_LOGD(TAG, "Trying to get connection info...");
-    LoginPacket lp = getConnectionInfo(bconn->clientSock);
-    ESP_LOGD(TAG, "Username: %s\nPassword: %s\nClient info: %s", lp.username, lp.password, lp.clientInfo);
+    Buffer buf;
 
     BanchoState bstate;
-    //bstate.client = bconn->client;
     bstate.clientSock = bconn->clientSock;
     bstate.writeLock = xSemaphoreCreateMutex();
     bstate.alive = true;
     bconn->bstate = &bstate;
 
-    ESP_LOGD(TAG, "Verifying login");
-    if (!authenticateChoUser(&bstate, lp.username, lp.password, bconn)) {
+    ESP_LOGD(TAG, "Trying to get connection info...");
+    CreateBuffer(&buf, sizeof(int32_t));
+    if (!initializeConnection(bconn)) {
         ESP_LOGI(TAG, "Authentication failed! Server dropping conenction");
-        bstate.alive = false;
+        BufferWriteU32(&buf, LOGIN_WRONG_PASS);
+        SendBanchoPacket(bconn->bstate, CHOPKT_LOGINREPLY, &buf);
+        BufferFree(&buf);
+
         close(bconn->clientSock);
         bconn->active = false;
         free(bconn);
@@ -248,11 +240,9 @@ void banchoTask(void *arg) {
         vTaskDelete(NULL);
     }
     ESP_LOGI(TAG, "Authentication successful!");
-    bconn->version = getClientVersion(lp);
-    bconn->username = (char*)malloc(strlen(lp.username) + 1);
-    strncpy(bconn->username, lp.username, strlen(lp.username) + 1);
-
-    LoginPacket_Free(&lp);
+    BufferWriteU32(&buf, bconn->userId);
+    SendBanchoPacket(bconn->bstate, CHOPKT_LOGINREPLY, &buf);
+    // Buffer not freed: we're reusing it to send permissions later on
 
     // Send channel list to the client
     for (int i = 0; i < CHANNEL_LIST_AUTOJOIN_LEN; i++) {
@@ -280,14 +270,12 @@ void banchoTask(void *arg) {
     broadcactStatusUpdate(bconn->userId, bconn->username, &bconn->statusUpdate, CHO_STATS_FULL);
 
     ESP_LOGD(TAG, "Sending permissions");
-    Buffer permBuf;
-    CreateBuffer(&permBuf, sizeof(uint32_t));
-    BufferWriteU32(&permBuf, PERM_ALL);
-    SendBanchoPacket(&bstate, CHOPKT_USER_PERMISSIONS, &permBuf);
-    free(permBuf.data);
+    BufferWriteU32(&buf, PERM_ALL);
+    SendBanchoPacket(&bstate, CHOPKT_USER_PERMISSIONS, &buf);
+    BufferFree(&buf); // Buffer freed because 4 bytes is not enough for us later on
 
-    /* Create out packet recv buffer */
-    Buffer buf;
+    // Create out packet recv buffer
+    // We're reusing the previous stack Buffer object to not bloat up the stack
     CreateBuffer(&buf, 0);
 
     while (bconn->active) {

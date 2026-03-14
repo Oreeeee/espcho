@@ -15,8 +15,19 @@ void UserStats_Write(const UserStats *p, BanchoState *bstate, Buffer* buf, const
         BufferWriteS64(buf, p->rankedScore);
         BufferWriteFloat(buf, p->accuracy);
         BufferWriteS32(buf, p->playcount);
-        BufferWriteS64(buf, p->totalScore);
-        BufferWriteS32(buf, p->rank);
+        if (version < 659 && p->totalScore >= 17705429348) {
+            // Versions between b365 and b659 have an overflow bug when the score is too high.
+            // We have to clamp it down for older versions.
+            BufferWriteS64(buf, 17705429348);
+        } else {
+            BufferWriteS64(buf, p->totalScore);
+        }
+
+        if (version < 695) {
+            BufferWriteU16(buf, p->rank);
+        } else {
+            BufferWriteS32(buf, p->rank);
+        }
     }
 
     if (p->completness == CHO_STATS_FULL) {

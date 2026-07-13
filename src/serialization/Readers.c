@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <stddef.h>
-#include <stdbool.h>
+#include <stdlib.h>
 
 int BufferReadFloat(Buffer* buf, float* dest) {
     if (buf->pos + 4 > buf->capacity) return -1;
